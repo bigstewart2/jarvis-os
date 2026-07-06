@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     )
     claude_code_max_turns: int = 50
 
+    automations_dir: str = "automations"
+
 
 def get_settings() -> Settings:
     return Settings()

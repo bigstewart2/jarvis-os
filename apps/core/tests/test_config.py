@@ -55,3 +55,8 @@ def test_claude_code_settings_defaults():
         "Read,Glob,Grep,Edit,Write,Bash(git status:*),Bash(git diff:*),Bash(git log:*)"
     )
     assert settings.claude_code_max_turns == 50
+
+
+def test_automations_dir_default():
+    settings = Settings(anthropic_api_key=None)
+    assert settings.automations_dir == "automations"
