@@ -7,9 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from core.automation.registry import AutomationRegistry
+from core.automation.runner import AutomationRunner
+from core.automation.scheduler import build_scheduler
 from core.config import get_settings
 from core.db.database import init_db, make_engine, make_session_factory
-from core.db.models import ClaudeCodeTask
+from core.db.models import AutomationRun, ClaudeCodeTask
 from core.events.bus import EventBus
 from core.providers.stt.factory import get_stt_provider
 from core.providers.tts.factory import get_tts_provider
@@ -63,6 +66,29 @@ def create_app() -> FastAPI:
             for row in orphaned:
                 row.status = "interrupted"
             session.commit()
+
+    automation_registry = AutomationRegistry(registry)
+    automation_registry.load_from_directory(BASE_DIR / settings.automations_dir)
+    app.state.automation_registry = automation_registry
+
+    automation_runner = AutomationRunner(automation_registry, app)
+    app.state.automation_runner = automation_runner
+
+    scheduler = build_scheduler(automation_registry, automation_runner)
+    app.state.scheduler = scheduler
+
+    @app.on_event("startup")
+    async def _start_scheduler_and_mark_orphaned_runs():
+        with app.state.session_factory() as session:
+            orphaned_runs = session.query(AutomationRun).filter_by(status="running").all()
+            for row in orphaned_runs:
+                row.status = "interrupted"
+            session.commit()
+        scheduler.start()
+
+    @app.on_event("shutdown")
+    async def _stop_scheduler():
+        scheduler.shutdown(wait=False)
 
     @app.get("/skills")
     def list_skills():
