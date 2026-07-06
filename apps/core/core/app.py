@@ -9,6 +9,8 @@ from core.config import get_settings
 from core.db.database import init_db, make_engine, make_session_factory
 from core.db.models import SkillInvocation
 from core.events.bus import EventBus
+from core.providers.stt.factory import get_stt_provider
+from core.providers.tts.factory import get_tts_provider
 from core.skills.registry import SkillRegistry
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +39,9 @@ def create_app() -> FastAPI:
     app.state.session_factory = make_session_factory(engine)
 
     app.state.event_bus = EventBus()
+
+    app.state.stt_provider = get_stt_provider(settings)
+    app.state.tts_provider = get_tts_provider(settings)
 
     @app.get("/skills")
     def list_skills():

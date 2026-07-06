@@ -121,3 +121,9 @@ def test_slow_skill_invocation_does_not_block_other_requests(tmp_path, monkeypat
     # still blocked by the slow skill's inline synchronous sleep, this would
     # take close to the remaining ~0.4s of that sleep instead.
     assert echo_elapsed < 0.3
+
+
+def test_app_state_has_stt_and_tts_providers(tmp_path, monkeypatch):
+    client, app = _client(tmp_path, monkeypatch)
+    assert app.state.stt_provider is not None
+    assert app.state.tts_provider is not None
