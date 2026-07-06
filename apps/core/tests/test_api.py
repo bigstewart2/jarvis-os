@@ -40,3 +40,16 @@ def test_invoke_unknown_skill_returns_404(tmp_path, monkeypatch):
     client, _ = _client(tmp_path, monkeypatch)
     response = client.post("/skills/does-not-exist/invoke", json={"inputs": {}})
     assert response.status_code == 404
+
+
+def test_websocket_receives_skill_invoked_event(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+
+    with client.websocket_connect("/ws") as websocket:
+        client.post("/skills/echo/invoke", json={"inputs": {"text": "streamed"}})
+        event = websocket.receive_json()
+
+    assert event["type"] == "skill_invoked"
+    assert event["skill_id"] == "echo"
+    assert event["status"] == "completed"
+    assert event["outputs"] == {"text": "streamed"}

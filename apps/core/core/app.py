@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from core.config import get_settings
@@ -66,5 +66,18 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail=outputs)
 
         return {"outputs": outputs}
+
+    @app.websocket("/ws")
+    async def events_ws(websocket: WebSocket):
+        await websocket.accept()
+        queue = app.state.event_bus.subscribe()
+        try:
+            while True:
+                event = await queue.get()
+                await websocket.send_json(event)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            app.state.event_bus.unsubscribe(queue)
 
     return app
