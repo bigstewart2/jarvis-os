@@ -51,3 +51,19 @@ class ClaudeCodeTask(Base):
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AutomationRun(Base):
+    __tablename__ = "automation_runs"
+
+    run_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    automation_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    trigger: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="running")
+    steps: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    failed_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
