@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -8,11 +9,14 @@ from pydantic import BaseModel
 
 from core.config import get_settings
 from core.db.database import init_db, make_engine, make_session_factory
+from core.db.models import ClaudeCodeTask
 from core.events.bus import EventBus
 from core.providers.stt.factory import get_stt_provider
 from core.providers.tts.factory import get_tts_provider
 from core.skills.invocation import SkillNotFoundError, invoke_and_record_skill
 from core.skills.registry import SkillRegistry
+from core.tasks.manager import TaskManager
+from core.tasks.registry import set_task_manager
 from core.voice.files import clear_voice_dir
 from core.voice.pipeline import run_voice_pipeline
 
@@ -46,6 +50,19 @@ def create_app() -> FastAPI:
     app.state.stt_provider = get_stt_provider(settings)
     app.state.tts_provider = get_tts_provider(settings)
     clear_voice_dir(BASE_DIR / settings.voice_dir)
+
+    task_manager = TaskManager(settings, app.state.session_factory, app.state.event_bus)
+    set_task_manager(task_manager)
+    app.state.task_manager = task_manager
+
+    @app.on_event("startup")
+    async def _bind_task_manager_and_mark_orphans():
+        task_manager.bind_loop(asyncio.get_running_loop())
+        with app.state.session_factory() as session:
+            orphaned = session.query(ClaudeCodeTask).filter_by(status="running").all()
+            for row in orphaned:
+                row.status = "interrupted"
+            session.commit()
 
     @app.get("/skills")
     def list_skills():
