@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from core.automation.registry import AutomationRegistry
@@ -164,6 +164,102 @@ def create_app() -> FastAPI:
                 }
                 for row in rows
             ]
+
+    @app.get("/automations")
+    def list_automations():
+        result = []
+        for loaded in automation_registry.list():
+            if not loaded.is_valid:
+                result.append({
+                    "id": loaded.automation_id,
+                    "name": None,
+                    "description": None,
+                    "enabled": None,
+                    "cron": None,
+                    "status": "invalid",
+                    "load_error": loaded.load_error,
+                    "last_run": None,
+                })
+                continue
+
+            definition = loaded.definition
+            with app.state.session_factory() as session:
+                last_run = (
+                    session.query(AutomationRun)
+                    .filter_by(automation_id=loaded.automation_id)
+                    .order_by(AutomationRun.started_at.desc())
+                    .first()
+                )
+                last_run_data = (
+                    {
+                        "run_id": last_run.run_id,
+                        "status": last_run.status,
+                        "finished_at": last_run.finished_at.isoformat() if last_run.finished_at else None,
+                    }
+                    if last_run
+                    else None
+                )
+
+            result.append({
+                "id": loaded.automation_id,
+                "name": definition.name,
+                "description": definition.description,
+                "enabled": definition.enabled,
+                "cron": definition.trigger.cron,
+                "status": "scheduled" if definition.enabled else "disabled",
+                "load_error": None,
+                "last_run": last_run_data,
+            })
+        return result
+
+    @app.post("/automations/{automation_id}/run")
+    async def trigger_automation(automation_id: str):
+        loaded = automation_registry.get(automation_id)
+        if loaded is None:
+            raise HTTPException(status_code=404, detail=f"Unknown automation: {automation_id}")
+        if not loaded.is_valid:
+            raise HTTPException(
+                status_code=409, detail=f"Automation '{automation_id}' is invalid: {loaded.load_error}"
+            )
+        run_id = await automation_runner.start(automation_id, "manual")
+        return JSONResponse(status_code=202, content={"run_id": run_id})
+
+    @app.get("/automations/runs")
+    def list_automation_runs(automation_id: str | None = None, limit: int = 50):
+        with app.state.session_factory() as session:
+            query = session.query(AutomationRun)
+            if automation_id:
+                query = query.filter_by(automation_id=automation_id)
+            rows = query.order_by(AutomationRun.started_at.desc()).limit(limit).all()
+            return [
+                {
+                    "run_id": row.run_id,
+                    "automation_id": row.automation_id,
+                    "trigger": row.trigger,
+                    "status": row.status,
+                    "started_at": row.started_at.isoformat() if row.started_at else None,
+                    "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+                }
+                for row in rows
+            ]
+
+    @app.get("/automations/runs/{run_id}")
+    def get_automation_run(run_id: str):
+        with app.state.session_factory() as session:
+            row = session.get(AutomationRun, run_id)
+            if row is None:
+                raise HTTPException(status_code=404, detail="Automation run not found")
+            return {
+                "run_id": row.run_id,
+                "automation_id": row.automation_id,
+                "trigger": row.trigger,
+                "status": row.status,
+                "steps": row.steps,
+                "failed_step": row.failed_step,
+                "error": row.error,
+                "started_at": row.started_at.isoformat() if row.started_at else None,
+                "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+            }
 
     @app.websocket("/ws")
     async def events_ws(websocket: WebSocket):
