@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core.config import get_settings
@@ -18,6 +19,12 @@ class InvokeRequest(BaseModel):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Jarvis OS Core")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:1420", "tauri://localhost"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     settings = get_settings()
 
     registry = SkillRegistry()

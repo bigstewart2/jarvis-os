@@ -53,3 +53,10 @@ def test_websocket_receives_skill_invoked_event(tmp_path, monkeypatch):
     assert event["skill_id"] == "echo"
     assert event["status"] == "completed"
     assert event["outputs"] == {"text": "streamed"}
+
+
+def test_cors_allows_tauri_dev_origin(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.get("/skills", headers={"Origin": "http://localhost:1420"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:1420"
