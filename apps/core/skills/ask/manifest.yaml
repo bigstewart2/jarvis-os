@@ -1,0 +1,16 @@
+id: ask
+name: Ask
+description: Sends a prompt to the configured LLM provider and returns its text response.
+input_schema:
+  type: object
+  properties:
+    prompt:
+      type: string
+  required:
+    - prompt
+output_schema:
+  type: object
+  properties:
+    response:
+      type: string
+voice_invokable: true
