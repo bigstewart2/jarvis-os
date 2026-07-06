@@ -44,3 +44,14 @@ def test_voice_settings_defaults():
     assert settings.tts_provider == "piper"
     assert settings.piper_voice == "en_US-lessac-medium"
     assert settings.voice_dir == "data/voice"
+
+
+def test_claude_code_settings_defaults():
+    settings = Settings(anthropic_api_key=None)
+    assert settings.claude_code_binary == "claude"
+    assert settings.claude_code_subpath == ""
+    assert settings.claude_code_timeout_seconds == 600
+    assert settings.claude_code_allowed_tools == (
+        "Read,Glob,Grep,Edit,Write,Bash(git status:*),Bash(git diff:*),Bash(git log:*)"
+    )
+    assert settings.claude_code_max_turns == 50

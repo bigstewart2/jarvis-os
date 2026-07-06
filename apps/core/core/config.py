@@ -28,6 +28,14 @@ class Settings(BaseSettings):
     piper_voice: str = "en_US-lessac-medium"
     voice_dir: str = "data/voice"
 
+    claude_code_binary: str = "claude"
+    claude_code_subpath: str = ""
+    claude_code_timeout_seconds: int = 600
+    claude_code_allowed_tools: str = (
+        "Read,Glob,Grep,Edit,Write,Bash(git status:*),Bash(git diff:*),Bash(git log:*)"
+    )
+    claude_code_max_turns: int = 50
+
 
 def get_settings() -> Settings:
     return Settings()

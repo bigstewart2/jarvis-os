@@ -11,6 +11,7 @@ class SkillManifest(BaseModel):
     input_schema: dict = Field(default_factory=dict)
     output_schema: dict = Field(default_factory=dict)
     voice_invokable: bool = False
+    background: bool = False
     ui_component: str | None = None
 
 
