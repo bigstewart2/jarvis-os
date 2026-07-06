@@ -1,0 +1,16 @@
+id: echo
+name: Echo
+description: Repeats back whatever text it is given. Used to prove the skill contract end-to-end.
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+  required:
+    - text
+output_schema:
+  type: object
+  properties:
+    text:
+      type: string
+voice_invokable: true
