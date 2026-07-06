@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stand-in for the `claude` CLI in tests. Behavior controlled via env vars:
 
-STUB_CLI_MODE=success|failure (default: success)
+STUB_CLI_MODE=success|failure|large_line (default: success)
 STUB_CLI_PID_FILE=<path> (optional) — if set, spawns a child process and
     writes this process's PID and the child's PID to the file, one per line,
     for tests that verify no orphaned processes survive a kill.
@@ -27,6 +27,14 @@ def main() -> None:
 
     emit({"type": "system", "subtype": "init"})
     emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": "foo.py"}}]}})
+
+    if mode == "large_line":
+        # Simulate a real `--verbose stream-json` line containing a large
+        # tool result (e.g. a Read of a moderately-sized file), which easily
+        # exceeds asyncio's default 64KB readline() limit.
+        big_command = "x" * (200 * 1024)
+        emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": big_command}}]}})
+
     emit({"type": "assistant", "message": {"content": [{"type": "text", "text": "Working on it."}]}})
     print("not valid json at all", flush=True)
 
