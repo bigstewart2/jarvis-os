@@ -1,16 +1,15 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core.config import get_settings
 from core.db.database import init_db, make_engine, make_session_factory
-from core.db.models import SkillInvocation
 from core.events.bus import EventBus
 from core.providers.stt.factory import get_stt_provider
 from core.providers.tts.factory import get_tts_provider
+from core.skills.invocation import SkillNotFoundError, invoke_and_record_skill
 from core.skills.registry import SkillRegistry
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,31 +48,10 @@ def create_app() -> FastAPI:
 
     @app.post("/skills/{skill_id}/invoke")
     async def invoke_skill(skill_id: str, request: InvokeRequest):
-        loaded = registry.get(skill_id)
-        if loaded is None:
-            raise HTTPException(status_code=404, detail=f"Unknown skill: {skill_id}")
-
-        status = "completed"
         try:
-            outputs = await run_in_threadpool(loaded.run, request.inputs)
-        except Exception as exc:
-            status = "failed"
-            outputs = {"error": str(exc)}
-
-        with app.state.session_factory() as session:
-            session.add(
-                SkillInvocation(
-                    skill_id=skill_id,
-                    inputs=request.inputs,
-                    outputs=outputs,
-                    status=status,
-                )
-            )
-            session.commit()
-
-        await app.state.event_bus.publish(
-            {"type": "skill_invoked", "skill_id": skill_id, "status": status, "outputs": outputs}
-        )
+            status, outputs = await invoke_and_record_skill(app, skill_id, request.inputs)
+        except SkillNotFoundError:
+            raise HTTPException(status_code=404, detail=f"Unknown skill: {skill_id}")
 
         if status == "failed":
             raise HTTPException(status_code=500, detail=outputs)
