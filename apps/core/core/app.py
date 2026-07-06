@@ -99,6 +99,46 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="Audio not found")
         return FileResponse(path, media_type="audio/wav")
 
+    @app.get("/tasks/{task_id}")
+    def get_task(task_id: str):
+        with app.state.session_factory() as session:
+            row = session.get(ClaudeCodeTask, task_id)
+            if row is None:
+                raise HTTPException(status_code=404, detail="Task not found")
+            return {
+                "task_id": row.task_id,
+                "status": row.status,
+                "prompt": row.prompt,
+                "working_dir": row.working_dir,
+                "result_text": row.result_text,
+                "error": row.error,
+                "num_turns": row.num_turns,
+                "duration_ms": row.duration_ms,
+                "cost_usd": row.cost_usd,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+            }
+
+    @app.get("/tasks")
+    def list_tasks():
+        with app.state.session_factory() as session:
+            rows = (
+                session.query(ClaudeCodeTask)
+                .order_by(ClaudeCodeTask.created_at.desc())
+                .limit(50)
+                .all()
+            )
+            return [
+                {
+                    "task_id": row.task_id,
+                    "status": row.status,
+                    "prompt": row.prompt,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+                }
+                for row in rows
+            ]
+
     @app.websocket("/ws")
     async def events_ws(websocket: WebSocket):
         await websocket.accept()
