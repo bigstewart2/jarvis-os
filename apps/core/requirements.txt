@@ -12,3 +12,4 @@ anthropic>=0.39
 faster-whisper>=1.0
 piper-tts>=1.2
 jsonschema>=4.23
+python-multipart>=0.0.12

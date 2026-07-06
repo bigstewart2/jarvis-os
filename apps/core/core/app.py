@@ -1,7 +1,9 @@
+import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from core.config import get_settings
@@ -11,6 +13,8 @@ from core.providers.stt.factory import get_stt_provider
 from core.providers.tts.factory import get_tts_provider
 from core.skills.invocation import SkillNotFoundError, invoke_and_record_skill
 from core.skills.registry import SkillRegistry
+from core.voice.files import clear_voice_dir
+from core.voice.pipeline import run_voice_pipeline
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,6 +45,7 @@ def create_app() -> FastAPI:
 
     app.state.stt_provider = get_stt_provider(settings)
     app.state.tts_provider = get_tts_provider(settings)
+    clear_voice_dir(BASE_DIR / settings.voice_dir)
 
     @app.get("/skills")
     def list_skills():
@@ -57,6 +62,25 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail=outputs)
 
         return {"outputs": outputs}
+
+    @app.post("/voice/invoke")
+    async def voice_invoke(audio: UploadFile = File(...)):
+        audio_bytes = await audio.read()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Empty audio upload")
+        extension = Path(audio.filename or "clip.webm").suffix.lstrip(".") or "webm"
+        return await run_voice_pipeline(app, audio_bytes, extension)
+
+    @app.get("/voice/audio/{audio_id}")
+    def get_voice_audio(audio_id: str):
+        try:
+            uuid.UUID(audio_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid audio id")
+        path = BASE_DIR / settings.voice_dir / "tts" / f"{audio_id}.wav"
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="Audio not found")
+        return FileResponse(path, media_type="audio/wav")
 
     @app.websocket("/ws")
     async def events_ws(websocket: WebSocket):
