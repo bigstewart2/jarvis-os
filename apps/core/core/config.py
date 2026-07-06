@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2:3b"
 
+    stt_provider: Literal["faster_whisper"] = "faster_whisper"
+    stt_model: str = "small"
+    stt_compute_type: str = "int8"
+    tts_provider: Literal["piper"] = "piper"
+    piper_voice: str = "en_US-lessac-medium"
+    voice_dir: str = "data/voice"
+
 
 def get_settings() -> Settings:
     return Settings()

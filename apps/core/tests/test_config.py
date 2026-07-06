@@ -34,3 +34,13 @@ def test_anthropic_api_key_prefers_jarvis_prefixed_env_var(monkeypatch):
     monkeypatch.setenv("JARVIS_ANTHROPIC_API_KEY", "prefixed-env-key")
     settings = Settings()
     assert settings.anthropic_api_key == "prefixed-env-key"
+
+
+def test_voice_settings_defaults():
+    settings = Settings(anthropic_api_key=None)
+    assert settings.stt_provider == "faster_whisper"
+    assert settings.stt_model == "small"
+    assert settings.stt_compute_type == "int8"
+    assert settings.tts_provider == "piper"
+    assert settings.piper_voice == "en_US-lessac-medium"
+    assert settings.voice_dir == "data/voice"
