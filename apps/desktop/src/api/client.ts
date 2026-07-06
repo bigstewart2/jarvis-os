@@ -42,3 +42,33 @@ export async function invokeSkill(
   }
   return response.json();
 }
+
+export interface VoiceInvokeResponse {
+  invocation_id: string;
+  transcript: string;
+  skill_id: string | null;
+  fallback_used: boolean;
+  fallback_reason: string | null;
+  outputs: Record<string, unknown> | null;
+  response_text: string;
+  audio_url: string | null;
+  error: string | null;
+}
+
+export async function invokeVoice(audio: Blob): Promise<VoiceInvokeResponse> {
+  const formData = new FormData();
+  formData.append("audio", audio, "clip.webm");
+  const response = await fetch(`${BASE_URL}/voice/invoke`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(`Failed to invoke voice: ${response.status} ${JSON.stringify(body)}`);
+  }
+  return response.json();
+}
+
+export function voiceAudioUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
