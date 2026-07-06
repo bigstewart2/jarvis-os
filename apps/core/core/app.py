@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -49,7 +50,7 @@ def create_app() -> FastAPI:
 
         status = "completed"
         try:
-            outputs = loaded.run(request.inputs)
+            outputs = await run_in_threadpool(loaded.run, request.inputs)
         except Exception as exc:
             status = "failed"
             outputs = {"error": str(exc)}
