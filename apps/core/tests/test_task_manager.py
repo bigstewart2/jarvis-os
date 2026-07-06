@@ -1,5 +1,9 @@
 import asyncio
+import os
+import time
 from pathlib import Path
+
+import pytest
 
 from core.config import Settings
 from core.db.database import init_db, make_engine, make_session_factory
@@ -65,3 +69,31 @@ def test_nonzero_exit_marks_task_failed(tmp_path, monkeypatch):
         row = session.get(ClaudeCodeTask, task_id)
         assert row.status == "failed"
         assert row.error is not None
+
+
+def test_timeout_kills_process_group_and_marks_timed_out(tmp_path, monkeypatch):
+    monkeypatch.setenv("STUB_CLI_SLOW", "1")
+    pid_file = tmp_path / "pids.txt"
+    monkeypatch.setenv("STUB_CLI_PID_FILE", str(pid_file))
+
+    engine = make_engine(f"sqlite:///{tmp_path}/test.db")
+    init_db(engine)
+    session_factory = make_session_factory(engine)
+    settings = Settings(anthropic_api_key=None, claude_code_binary=STUB_CLI, claude_code_timeout_seconds=1)
+    event_bus = EventBus()
+    manager = TaskManager(settings, session_factory, event_bus)
+
+    task_id, events = asyncio.run(_run_and_collect_events(manager, event_bus, tmp_path))
+
+    assert events[-1]["stage"] == "timed_out"
+
+    with session_factory() as session:
+        row = session.get(ClaudeCodeTask, task_id)
+        assert row.status == "timed_out"
+
+    time.sleep(0.5)
+    pids = [int(p) for p in pid_file.read_text().split()]
+    assert len(pids) == 2
+    for pid in pids:
+        with pytest.raises(ProcessLookupError):
+            os.kill(pid, 0)

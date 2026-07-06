@@ -1,4 +1,6 @@
 import asyncio
+import os
+import signal
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,6 +45,20 @@ class TaskManager:
             row.finished_at = datetime.now(timezone.utc)
             session.commit()
 
+    async def _kill_process_group(self, process: asyncio.subprocess.Process) -> None:
+        if process.returncode is not None:
+            return
+        try:
+            pgid = os.getpgid(process.pid)
+        except ProcessLookupError:
+            return
+        os.killpg(pgid, signal.SIGTERM)
+        try:
+            await asyncio.wait_for(process.wait(), timeout=5.0)
+        except asyncio.TimeoutError:
+            os.killpg(pgid, signal.SIGKILL)
+            await process.wait()
+
     async def _run(self, task_id: str, prompt: str, working_dir: Path) -> None:
         await self._publish(task_id, "started", {"prompt_excerpt": prompt[:120], "working_dir": str(working_dir)})
 
@@ -84,7 +100,20 @@ class TaskManager:
                     break
                 stderr_chunks.append(chunk)
 
-        await asyncio.gather(read_stdout(), read_stderr(), process.wait())
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(read_stdout(), read_stderr(), process.wait()),
+                timeout=self._settings.claude_code_timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            await self._kill_process_group(process)
+            await self._publish(
+                task_id, "timed_out", {"timeout_seconds": self._settings.claude_code_timeout_seconds}
+            )
+            self._write_terminal_state(
+                task_id, "timed_out", error=f"timed out after {self._settings.claude_code_timeout_seconds}s"
+            )
+            return
 
         stderr_text = b"".join(stderr_chunks).decode("utf-8", errors="replace")
 
