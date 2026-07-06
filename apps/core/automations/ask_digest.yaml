@@ -1,0 +1,14 @@
+id: ask_digest
+name: Daily Ask Digest
+description: Every morning, ask the LLM for an interesting fact about today's date and speak it.
+enabled: true
+trigger:
+  type: cron
+  cron: "0 9 * * *"
+steps:
+  - skill: ask
+    inputs:
+      prompt: "In two sentences, tell me one genuinely interesting historical fact about today's date."
+  - skill: speak
+    inputs:
+      text: "{{steps.0.response}}"
