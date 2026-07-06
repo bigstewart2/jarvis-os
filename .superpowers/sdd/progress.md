@@ -5,7 +5,7 @@ Worktree: .claude/worktrees/jarvis-os-m3-llm-provider (branch worktree-jarvis-os
 Baseline: 19 passed (before Task 1)
 
 ## Tasks
-- [ ] Task 1: Settings + LLMProvider Protocol
+- [x] Task 1: Settings + LLMProvider Protocol (commit f767ab4)
 - [ ] Task 2: AnthropicProvider
 - [ ] Task 3: OllamaProvider
 - [ ] Task 4: Provider factory
