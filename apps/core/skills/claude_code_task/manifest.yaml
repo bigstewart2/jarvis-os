@@ -1,0 +1,31 @@
+id: claude_code_task
+name: Claude Code Task
+description: Run a coding/agentic task headlessly against the Jarvis OS repo via the Claude Code CLI. Returns a task_id immediately; progress streams over the event bus.
+voice_invokable: false
+background: true
+input_schema:
+  type: object
+  properties:
+    prompt:
+      type: string
+      minLength: 1
+      description: The task for Claude Code to perform.
+    subpath:
+      type: string
+      description: Optional path relative to the repo root to use as the working directory.
+  required:
+    - prompt
+  additionalProperties: false
+output_schema:
+  type: object
+  properties:
+    task_id:
+      type:
+        - string
+        - "null"
+    status:
+      type: string
+    error:
+      type:
+        - string
+        - "null"
