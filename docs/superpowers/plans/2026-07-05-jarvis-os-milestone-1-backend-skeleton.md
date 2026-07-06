@@ -6,7 +6,7 @@
 
 **Architecture:** A single FastAPI app (`core.app.create_app`) owns three collaborators built in isolation first and wired together last: a `SkillRegistry` that discovers skills from a directory of `manifest.yaml` + `skill.py` pairs, a SQLAlchemy/SQLite session factory that logs every invocation, and an `EventBus` that fans out invocation events to any connected WebSocket. `GET /skills` lists manifests, `POST /skills/{id}/invoke` runs a skill and logs + broadcasts the result, `/ws` streams events live.
 
-**Tech Stack:** Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2 + pydantic-settings, PyYAML, pytest + pytest-asyncio, FastAPI's `TestClient` (httpx-based) for HTTP and WebSocket tests.
+**Tech Stack:** Python 3.14 (the version installed on this machine), FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2 + pydantic-settings, PyYAML, pytest + pytest-asyncio, FastAPI's `TestClient` (httpx-based) for HTTP and WebSocket tests. Dependency versions are minimum-pinned (`>=`), not exact-pinned, so pip resolves to whatever release on PyPI actually supports the installed Python version.
 
 ## Global Constraints
 
@@ -34,16 +34,16 @@
 
 `apps/core/requirements.txt`:
 ```
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-sqlalchemy==2.0.35
-pydantic==2.9.2
-pydantic-settings==2.5.2
-pyyaml==6.0.2
-httpx==0.27.2
-websockets==13.1
-pytest==8.3.3
-pytest-asyncio==0.24.0
+fastapi>=0.115
+uvicorn[standard]>=0.32
+sqlalchemy>=2.0.35
+pydantic>=2.9
+pydantic-settings>=2.5
+pyyaml>=6.0
+httpx>=0.27
+websockets>=13.1
+pytest>=8.3
+pytest-asyncio>=0.24
 ```
 
 - [ ] **Step 2: Create the pytest config**
