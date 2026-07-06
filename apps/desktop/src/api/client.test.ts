@@ -103,13 +103,14 @@ describe("invokeVoice", () => {
     } as Response);
 
     const blob = new Blob(["fake-audio-bytes"], { type: "audio/webm" });
-    const result = await invokeVoice(blob);
+    const result = await invokeVoice(blob, "test-invocation-id");
 
     expect(result).toEqual(mockResult);
     const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(call[0]).toBe("http://127.0.0.1:8420/voice/invoke");
     expect(call[1].method).toBe("POST");
     expect((call[1].body as FormData).get("audio")).toBeInstanceOf(Blob);
+    expect((call[1].body as FormData).get("invocation_id")).toBe("test-invocation-id");
   });
 
   it("throws when the response is not ok", async () => {
@@ -120,7 +121,9 @@ describe("invokeVoice", () => {
     } as Response);
 
     const blob = new Blob(["fake-audio-bytes"], { type: "audio/webm" });
-    await expect(invokeVoice(blob)).rejects.toThrow("Failed to invoke voice: 500");
+    await expect(invokeVoice(blob, "test-invocation-id")).rejects.toThrow(
+      "Failed to invoke voice: 500"
+    );
   });
 });
 

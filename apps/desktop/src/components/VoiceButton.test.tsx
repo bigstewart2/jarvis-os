@@ -22,10 +22,16 @@ class FakeWebSocket {
   close() {}
 }
 
+function makeFakeStream() {
+  const tracks = [{ stop: vi.fn() }, { stop: vi.fn() }];
+  return { tracks, stream: { getTracks: () => tracks } };
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
+  const { stream } = makeFakeStream();
   Object.defineProperty(navigator, "mediaDevices", {
-    value: { getUserMedia: vi.fn().mockResolvedValue({}) },
+    value: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     configurable: true,
   });
   vi.stubGlobal("MediaRecorder", FakeMediaRecorder);
@@ -63,6 +69,10 @@ describe("VoiceButton", () => {
       expect(screen.getByTestId("voice-result")).toHaveTextContent("what is two plus two");
     });
     expect(screen.getByTestId("voice-result")).toHaveTextContent("fell back to ask");
+
+    const call = (client.invokeVoice as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(typeof call[1]).toBe("string");
+    expect(call[1].length).toBeGreaterThan(0);
   });
 
   it("shows an error message when invokeVoice rejects", async () => {
@@ -76,5 +86,57 @@ describe("VoiceButton", () => {
     await waitFor(() => {
       expect(screen.getByTestId("voice-error")).toHaveTextContent("backend down");
     });
+  });
+
+  it("recovers to idle and shows an error when getUserMedia rejects (mic permission denied)", async () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: {
+        getUserMedia: vi.fn().mockRejectedValue(new DOMException("Permission denied", "NotAllowedError")),
+      },
+      configurable: true,
+    });
+
+    render(<VoiceButton />);
+    const button = screen.getByTestId("voice-button");
+
+    fireEvent.mouseDown(button);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("voice-error")).toBeInTheDocument();
+    });
+    expect(button).toHaveTextContent("Hold to talk");
+  });
+
+  it("stops every MediaStream track after a recording completes", async () => {
+    const { tracks, stream } = makeFakeStream();
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: vi.fn().mockResolvedValue(stream) },
+      configurable: true,
+    });
+    vi.spyOn(client, "invokeVoice").mockResolvedValue({
+      invocation_id: "abc-123",
+      transcript: "hello",
+      skill_id: "echo",
+      fallback_used: false,
+      fallback_reason: null,
+      outputs: { text: "hi" },
+      response_text: "hi",
+      audio_url: null,
+      error: null,
+    });
+
+    render(<VoiceButton />);
+    const button = screen.getByTestId("voice-button");
+
+    fireEvent.mouseDown(button);
+    fireEvent.mouseUp(button);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("voice-result")).toBeInTheDocument();
+    });
+
+    for (const track of tracks) {
+      expect(track.stop).toHaveBeenCalled();
+    }
   });
 });

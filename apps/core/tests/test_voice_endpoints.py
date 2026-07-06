@@ -40,6 +40,7 @@ def test_voice_invoke_returns_full_pipeline_result(tmp_path, monkeypatch):
     response = client.post(
         "/voice/invoke",
         files={"audio": ("clip.webm", io.BytesIO(b"fake-audio-bytes"), "audio/webm")},
+        data={"invocation_id": "test-invocation-id"},
     )
 
     assert response.status_code == 200
@@ -47,6 +48,7 @@ def test_voice_invoke_returns_full_pipeline_result(tmp_path, monkeypatch):
     assert body["transcript"] == "say hi to me"
     assert body["skill_id"] == "echo"
     assert body["audio_url"].startswith("/voice/audio/")
+    assert body["invocation_id"] == "test-invocation-id"
 
 
 def test_voice_invoke_returns_400_for_empty_upload(tmp_path, monkeypatch):
@@ -55,6 +57,7 @@ def test_voice_invoke_returns_400_for_empty_upload(tmp_path, monkeypatch):
     response = client.post(
         "/voice/invoke",
         files={"audio": ("clip.webm", io.BytesIO(b""), "audio/webm")},
+        data={"invocation_id": "test-invocation-id"},
     )
 
     assert response.status_code == 400
@@ -67,6 +70,7 @@ def test_get_voice_audio_serves_generated_file(tmp_path, monkeypatch):
     invoke_response = client.post(
         "/voice/invoke",
         files={"audio": ("clip.webm", io.BytesIO(b"fake-audio-bytes"), "audio/webm")},
+        data={"invocation_id": "test-invocation-id"},
     )
     audio_url = invoke_response.json()["audio_url"]
 

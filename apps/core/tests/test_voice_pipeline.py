@@ -63,7 +63,7 @@ def _make_app(
 def test_happy_path_invokes_skill_and_returns_full_result(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch)
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["transcript"] == "what is two plus two"
     assert result["skill_id"] == "echo"
@@ -77,7 +77,7 @@ def test_happy_path_invokes_skill_and_returns_full_result(tmp_path, monkeypatch)
 def test_empty_transcript_skips_routing_and_returns_degraded_response(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch, stt=FakeSTT(transcript="   "))
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["transcript"] == ""
     assert result["skill_id"] is None
@@ -88,7 +88,7 @@ def test_empty_transcript_skips_routing_and_returns_degraded_response(tmp_path, 
 def test_stt_failure_returns_degraded_response(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch, stt=FakeSTT(raise_exc=RuntimeError("bad audio")))
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["response_text"] == "I couldn't process that audio."
     assert "stt_failed" in result["error"]
@@ -98,7 +98,7 @@ def test_llm_failure_during_routing_returns_degraded_response(tmp_path, monkeypa
     app = _make_app(tmp_path, monkeypatch)
     monkeypatch.setattr("core.voice.pipeline.get_llm_provider", lambda settings: RaisingLLM())
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["response_text"] == "I couldn't reach the language model."
     assert "routing_failed" in result["error"]
@@ -113,7 +113,7 @@ def test_skill_failure_returns_degraded_response(tmp_path, monkeypatch):
 
     app.state.registry._skills["echo"] = LoadedSkill(manifest=original.manifest, run=failing_run)
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["response_text"] == "The echo skill failed."
     assert "skill_failed" in result["error"]
@@ -122,12 +122,45 @@ def test_skill_failure_returns_degraded_response(tmp_path, monkeypatch):
 def test_tts_failure_still_returns_full_result_without_audio(tmp_path, monkeypatch):
     app = _make_app(tmp_path, monkeypatch, tts=FakeTTS(raise_exc=RuntimeError("piper missing")))
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["skill_id"] == "echo"
     assert result["outputs"] == {"text": "hi"}
     assert result["audio_url"] is None
     assert "tts_failed" in result["error"]
+
+
+def test_voice_status_events_carry_the_client_provided_invocation_id(tmp_path, monkeypatch):
+    app = _make_app(tmp_path, monkeypatch)
+    queue = app.state.event_bus.subscribe()
+
+    result = asyncio.run(
+        run_voice_pipeline(app, b"fake-audio-bytes", "webm", "client-supplied-id")
+    )
+
+    assert result["invocation_id"] == "client-supplied-id"
+
+    all_events = []
+    while not queue.empty():
+        all_events.append(queue.get_nowait())
+
+    voice_status_events = [event for event in all_events if event["type"] == "voice_status"]
+    assert voice_status_events, "expected at least one voice_status event to be published"
+    assert all(event["invocation_id"] == "client-supplied-id" for event in voice_status_events)
+
+
+def test_llm_provider_construction_failure_returns_degraded_response(tmp_path, monkeypatch):
+    app = _make_app(tmp_path, monkeypatch)
+
+    def raise_on_construct(settings):
+        raise ValueError("no API key")
+
+    monkeypatch.setattr("core.voice.pipeline.get_llm_provider", raise_on_construct)
+
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
+
+    assert result["response_text"] == "I couldn't reach the language model."
+    assert "routing_failed" in result["error"]
 
 
 def test_fallback_route_invokes_ask_and_logs_route_decision(tmp_path, monkeypatch):
@@ -144,7 +177,7 @@ def test_fallback_route_invokes_ask_and_logs_route_decision(tmp_path, monkeypatc
     ask_loaded = app.state.registry.get("ask")
     monkeypatch.setitem(ask_loaded.run.__globals__, "get_llm_provider", lambda settings: FakeRouterLLM("4"))
 
-    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm"))
+    result = asyncio.run(run_voice_pipeline(app, b"fake-audio-bytes", "webm", "test-invocation-id"))
 
     assert result["skill_id"] == "ask"
     assert result["fallback_used"] is True

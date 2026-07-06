@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -64,12 +64,12 @@ def create_app() -> FastAPI:
         return {"outputs": outputs}
 
     @app.post("/voice/invoke")
-    async def voice_invoke(audio: UploadFile = File(...)):
+    async def voice_invoke(audio: UploadFile = File(...), invocation_id: str = Form(...)):
         audio_bytes = await audio.read()
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="Empty audio upload")
         extension = Path(audio.filename or "clip.webm").suffix.lstrip(".") or "webm"
-        return await run_voice_pipeline(app, audio_bytes, extension)
+        return await run_voice_pipeline(app, audio_bytes, extension, invocation_id)
 
     @app.get("/voice/audio/{audio_id}")
     def get_voice_audio(audio_id: str):

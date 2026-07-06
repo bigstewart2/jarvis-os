@@ -26,6 +26,7 @@ export function VoiceButton() {
   const invocationIdRef = useRef<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopRequestedRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket(WS_URL);
@@ -43,21 +44,35 @@ export function VoiceButton() {
     setResult(null);
     setState("recording");
     stopRequestedRef.current = false;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-    chunksRef.current = [];
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunksRef.current.push(event.data);
-    };
-    recorder.onstop = () => {
-      void handleRecordingComplete();
-    };
-    mediaRecorderRef.current = recorder;
-    recorder.start();
-    // The user may have already released the button before getUserMedia
-    // resolved (a real race in push-to-talk UIs). Honor that immediately.
-    if (stopRequestedRef.current) {
-      recorder.stop();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        void handleRecordingComplete();
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      // The user may have already released the button before getUserMedia
+      // resolved (a real race in push-to-talk UIs). Honor that immediately.
+      if (stopRequestedRef.current) {
+        recorder.stop();
+      }
+    } catch (err) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      mediaRecorderRef.current = null;
+      stopRequestedRef.current = false;
+      setErrorMessage(
+        err instanceof Error ? err.message : "Microphone access was denied."
+      );
+      setState("idle");
     }
   };
 
@@ -73,10 +88,11 @@ export function VoiceButton() {
     mediaRecorderRef.current = null;
     setState("processing");
     setStatusLabel("Transcribing…");
+    const invocationId = crypto.randomUUID();
+    invocationIdRef.current = invocationId;
     const blob = new Blob(chunksRef.current, { type: "audio/webm" });
     try {
-      const response = await invokeVoice(blob);
-      invocationIdRef.current = response.invocation_id;
+      const response = await invokeVoice(blob, invocationId);
       setResult(response);
       if (response.audio_url && audioRef.current) {
         audioRef.current.src = voiceAudioUrl(response.audio_url);

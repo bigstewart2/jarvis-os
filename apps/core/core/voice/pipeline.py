@@ -1,4 +1,3 @@
-import uuid
 from pathlib import Path
 
 from fastapi.concurrency import run_in_threadpool
@@ -45,9 +44,8 @@ async def _publish(app, invocation_id: str, stage: str, detail: dict) -> None:
     )
 
 
-async def run_voice_pipeline(app, audio_bytes: bytes, upload_extension: str) -> dict:
+async def run_voice_pipeline(app, audio_bytes: bytes, upload_extension: str, invocation_id: str) -> dict:
     settings: Settings = get_settings()
-    invocation_id = str(uuid.uuid4())
     voice_dir = BASE_DIR / settings.voice_dir
     prune_tts_files(voice_dir)
 
@@ -95,8 +93,8 @@ async def run_voice_pipeline(app, audio_bytes: bytes, upload_extension: str) -> 
 
     await _publish(app, invocation_id, "routing", {"transcript": transcript})
     manifests = app.state.registry.list()
-    llm = get_llm_provider(settings)
     try:
+        llm = get_llm_provider(settings)
         route_result = await run_in_threadpool(route, transcript, manifests, llm)
     except Exception as exc:
         return await _speak_and_finish("I couldn't reach the language model.", f"routing_failed: {exc}")

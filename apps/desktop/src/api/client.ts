@@ -55,9 +55,10 @@ export interface VoiceInvokeResponse {
   error: string | null;
 }
 
-export async function invokeVoice(audio: Blob): Promise<VoiceInvokeResponse> {
+export async function invokeVoice(audio: Blob, invocationId: string): Promise<VoiceInvokeResponse> {
   const formData = new FormData();
   formData.append("audio", audio, "clip.webm");
+  formData.append("invocation_id", invocationId);
   const response = await fetch(`${BASE_URL}/voice/invoke`, {
     method: "POST",
     body: formData,
