@@ -1,0 +1,18 @@
+id: speak
+name: Speak
+description: Synthesizes the given text to speech using the configured TTS provider and returns a playable audio URL.
+voice_invokable: false
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+  required:
+    - text
+output_schema:
+  type: object
+  properties:
+    audio_url:
+      type: string
+    text:
+      type: string
