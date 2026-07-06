@@ -1,10 +1,49 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import App from "./App";
+import * as client from "./api/client";
+import type { SkillManifest } from "./api/client";
+
+const echoManifest: SkillManifest = {
+  id: "echo",
+  name: "Echo",
+  description: "Repeats back text.",
+  input_schema: {
+    type: "object",
+    properties: { text: { type: "string" } },
+    required: ["text"],
+  },
+  output_schema: { type: "object", properties: { text: { type: "string" } } },
+  voice_invokable: true,
+  ui_component: null,
+};
 
 describe("App", () => {
-  it("renders without crashing", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders a SkillForm for each fetched skill", async () => {
+    vi.spyOn(client, "fetchSkills").mockResolvedValue([echoManifest]);
+
     render(<App />);
-    expect(screen.getAllByText(/tauri|vite|react/i).length).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      expect(screen.getByText("Echo")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error if fetching skills fails", async () => {
+    vi.spyOn(client, "fetchSkills").mockRejectedValue(new Error("network down"));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("app-error")).toHaveTextContent("network down");
+    });
   });
 });
