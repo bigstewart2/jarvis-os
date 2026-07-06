@@ -180,6 +180,26 @@ steps:
     assert registry.get("good").is_valid
 
 
+def test_unreadable_binary_file_does_not_prevent_others_from_loading(tmp_path):
+    (tmp_path / "bad.yaml").write_bytes(b"\xff\xfe\x00\x01binary garbage not utf-8 \x80\x81")
+    _write(tmp_path / "good.yaml", """
+id: good
+name: Good
+description: Valid.
+trigger:
+  type: cron
+  cron: "0 9 * * *"
+steps:
+  - skill: echo
+    inputs: {}
+""")
+    registry = AutomationRegistry(_skill_registry_with_echo())
+    registry.load_from_directory(tmp_path)
+
+    assert not registry.get("bad").is_valid
+    assert registry.get("good").is_valid
+
+
 def test_malformed_yaml_file_does_not_prevent_others_from_loading(tmp_path):
     _write(tmp_path / "bad.yaml", """
 id: bad

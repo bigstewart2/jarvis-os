@@ -32,6 +32,8 @@ def load_definition(definition_path: Path) -> AutomationDefinition:
         raw = yaml.safe_load(definition_path.read_text())
     except yaml.YAMLError as exc:
         raise DefinitionError(f"Malformed YAML in automation definition {definition_path}: {exc}") from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        raise DefinitionError(f"Could not read automation definition {definition_path}: {exc}") from exc
     if raw is None:
         raise DefinitionError(f"Empty automation definition: {definition_path}")
     if not isinstance(raw, dict):

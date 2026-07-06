@@ -11,7 +11,7 @@ def build_scheduler(automation_registry: AutomationRegistry, runner: AutomationR
         if not loaded.is_valid or not loaded.definition.enabled:
             continue
         scheduler.add_job(
-            runner.start,
+            runner.run_and_wait,
             trigger=CronTrigger.from_crontab(loaded.definition.trigger.cron),
             args=[loaded.automation_id, "cron"],
             id=loaded.automation_id,
