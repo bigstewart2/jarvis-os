@@ -146,12 +146,12 @@ def create_app() -> FastAPI:
             }
 
     @app.get("/tasks")
-    def list_tasks():
+    def list_tasks(limit: int = 50):
         with app.state.session_factory() as session:
             rows = (
                 session.query(ClaudeCodeTask)
                 .order_by(ClaudeCodeTask.created_at.desc())
-                .limit(50)
+                .limit(limit)
                 .all()
             )
             return [
