@@ -11,3 +11,4 @@ pytest-asyncio>=0.24
 anthropic>=0.39
 faster-whisper>=1.0
 piper-tts>=1.2
+jsonschema>=4.23
