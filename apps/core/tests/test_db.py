@@ -52,3 +52,32 @@ def test_route_decision_can_be_created_and_queried():
         assert row.fallback_used is True
         assert row.fallback_reason == "model_chose_ask"
         assert row.created_at is not None
+
+
+def test_claude_code_task_can_be_created_and_queried():
+    from core.db.models import ClaudeCodeTask
+
+    engine = make_engine("sqlite:///:memory:")
+    init_db(engine)
+    session_factory = make_session_factory(engine)
+
+    with session_factory() as session:
+        session.add(
+            ClaudeCodeTask(
+                task_id="abc-123",
+                prompt="add a docstring",
+                working_dir="/tmp/jarvis-os",
+                status="running",
+            )
+        )
+        session.commit()
+
+    with session_factory() as session:
+        row = session.get(ClaudeCodeTask, "abc-123")
+        assert row.prompt == "add a docstring"
+        assert row.working_dir == "/tmp/jarvis-os"
+        assert row.status == "running"
+        assert row.result_text is None
+        assert row.error is None
+        assert row.created_at is not None
+        assert row.finished_at is None
