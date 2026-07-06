@@ -28,9 +28,16 @@ class DefinitionError(Exception):
 
 
 def load_definition(definition_path: Path) -> AutomationDefinition:
-    raw = yaml.safe_load(definition_path.read_text())
+    try:
+        raw = yaml.safe_load(definition_path.read_text())
+    except yaml.YAMLError as exc:
+        raise DefinitionError(f"Malformed YAML in automation definition {definition_path}: {exc}") from exc
     if raw is None:
         raise DefinitionError(f"Empty automation definition: {definition_path}")
+    if not isinstance(raw, dict):
+        raise DefinitionError(
+            f"Automation definition must be a YAML mapping, got {type(raw).__name__}: {definition_path}"
+        )
     try:
         definition = AutomationDefinition(**raw)
     except ValidationError as exc:

@@ -80,6 +80,20 @@ steps: []
         load_definition(path)
 
 
+def test_malformed_yaml_syntax_raises_definition_error(tmp_path):
+    path = tmp_path / "digest.yaml"
+    path.write_text("id: digest\nname: [unterminated flow sequence\n")
+    with pytest.raises(DefinitionError):
+        load_definition(path)
+
+
+def test_non_mapping_yaml_raises_definition_error(tmp_path):
+    path = tmp_path / "digest.yaml"
+    path.write_text("- just\n- a\n- list\n")
+    with pytest.raises(DefinitionError):
+        load_definition(path)
+
+
 def test_id_not_matching_filename_raises_definition_error(tmp_path):
     path = _write(tmp_path / "digest.yaml", """
 id: wrong_id
