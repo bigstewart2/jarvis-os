@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SkillManifest } from "./api/client";
 import { fetchSkills } from "./api/client";
 import { SkillForm } from "./components/SkillForm";
+import { VoiceButton } from "./components/VoiceButton";
 
 function App() {
   const [skills, setSkills] = useState<SkillManifest[]>([]);
@@ -21,6 +22,7 @@ function App() {
           {error}
         </p>
       )}
+      <VoiceButton />
       {skills.map((skill) => (
         <SkillForm key={skill.id} skill={skill} />
       ))}

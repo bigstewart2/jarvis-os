@@ -18,9 +18,16 @@ const echoManifest: SkillManifest = {
   ui_component: null,
 };
 
+class FakeWebSocket {
+  onmessage: ((event: { data: string }) => void) | null = null;
+  constructor(_url: string) {}
+  close() {}
+}
+
 describe("App", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
   });
 
   afterEach(() => {
