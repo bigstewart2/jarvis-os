@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     claude_code_max_turns: int = 50
 
     automations_dir: str = "automations"
+    knowledge_vault_dir: str = "tests/fixtures/vault"
 
 
 def get_settings() -> Settings:

@@ -1,0 +1,16 @@
+id: search_notes
+name: Search Notes
+description: Searches your Obsidian vault for notes matching a query and returns matching excerpts.
+voice_invokable: true
+input_schema:
+  type: object
+  properties:
+    query:
+      type: string
+  required:
+    - query
+output_schema:
+  type: object
+  properties:
+    matches:
+      type: array
