@@ -1,11 +1,7 @@
 import shutil
+from pathlib import Path
 
 from core.providers.knowledge.obsidian import ObsidianVaultSource
-
-FIXTURE_VAULT = None  # set below after Path import to keep this block copy-pasteable
-
-
-from pathlib import Path  # noqa: E402
 
 FIXTURE_VAULT = Path(__file__).resolve().parent / "fixtures" / "vault"
 
@@ -84,3 +80,47 @@ def test_does_not_escape_vault_root(tmp_path):
     matches = source.search("targetphrase")
 
     assert matches == []
+
+
+def test_read_returns_content_for_existing_note():
+    source = ObsidianVaultSource(FIXTURE_VAULT)
+
+    content = source.read("project-ideas.md")
+
+    assert content is not None
+    assert "Jarvis OS should eventually search my notes." in content
+
+
+def test_read_returns_content_for_nested_note():
+    source = ObsidianVaultSource(FIXTURE_VAULT)
+
+    content = source.read("subdir/nested-note.md")
+
+    assert content is not None
+    assert "Quarterly Review" in content
+
+
+def test_read_returns_none_for_missing_note():
+    source = ObsidianVaultSource(FIXTURE_VAULT)
+
+    content = source.read("does-not-exist.md")
+
+    assert content is None
+
+
+def test_read_returns_none_for_relative_path_traversal_attempt():
+    source = ObsidianVaultSource(FIXTURE_VAULT)
+
+    content = source.read("../../../../etc/passwd")
+
+    assert content is None
+
+
+def test_read_returns_none_for_absolute_path_outside_vault(tmp_path):
+    outside_file = tmp_path / "secret.md"
+    outside_file.write_text("top secret content")
+    source = ObsidianVaultSource(FIXTURE_VAULT)
+
+    content = source.read(str(outside_file))
+
+    assert content is None

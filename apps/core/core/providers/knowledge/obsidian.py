@@ -69,3 +69,18 @@ class ObsidianVaultSource:
                 break
 
         return matches
+
+    def read(self, path: str) -> str | None:
+        candidate = self.vault_root / path
+        resolved_root = self.vault_root.resolve()
+        resolved_candidate = candidate.resolve()
+
+        if not resolved_candidate.is_relative_to(resolved_root):
+            return None
+        if not candidate.is_file():
+            return None
+
+        try:
+            return candidate.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            return None
