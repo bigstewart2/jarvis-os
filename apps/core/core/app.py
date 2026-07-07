@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
@@ -30,8 +31,8 @@ class InvokeRequest(BaseModel):
     inputs: dict
 
 
-KNOWN_WIDGET_IDS = {"skills", "voice", "automations", "tasks"}
-DEFAULT_WIDGET_ORDER = ["skills", "voice", "automations", "tasks"]
+KNOWN_WIDGET_IDS = {"skills", "voice", "automations", "tasks", "notes"}
+DEFAULT_WIDGET_ORDER = ["skills", "voice", "automations", "tasks", "notes"]
 
 
 class DashboardConfigRequest(BaseModel):
@@ -300,6 +301,7 @@ def create_app() -> FastAPI:
             else:
                 row.widget_order = request.widget_order
                 row.hidden_widgets = request.hidden_widgets
+            row.updated_at = datetime.now(timezone.utc)
             session.commit()
             return {"widget_order": row.widget_order, "hidden_widgets": row.hidden_widgets}
 
