@@ -4,3 +4,4 @@ __pycache__/
 *.db
 voices/
 data/voice/
+.env
