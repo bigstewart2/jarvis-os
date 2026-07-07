@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     stt_compute_type: str = "int8"
     tts_provider: Literal["piper"] = "piper"
     piper_voice: str = "en_US-lessac-medium"
+    piper_voices_dir: str = "voices"
     voice_dir: str = "data/voice"
 
     claude_code_binary: str = "claude"
