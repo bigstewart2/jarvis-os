@@ -60,21 +60,3 @@ def test_list_tasks_returns_newest_first(tmp_path, monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert [t["task_id"] for t in body] == ["second", "first"]
-
-
-def test_list_tasks_respects_limit_query_param(tmp_path, monkeypatch):
-    client, app = _client(tmp_path, monkeypatch)
-    with app.state.session_factory() as session:
-        for i in range(5):
-            session.add(ClaudeCodeTask(
-                task_id=f"task-{i}", prompt="p", working_dir="/tmp", status="completed",
-                created_at=datetime(2026, 1, i + 1, tzinfo=timezone.utc),
-            ))
-        session.commit()
-
-    response = client.get("/tasks?limit=2")
-
-    assert response.status_code == 200
-    body = response.json()
-    assert len(body) == 2
-    assert [t["task_id"] for t in body] == ["task-4", "task-3"]
