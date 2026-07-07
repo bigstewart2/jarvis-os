@@ -99,3 +99,35 @@ export async function saveDashboardConfig(config: DashboardConfig): Promise<Dash
   }
   return response.json();
 }
+
+export interface Automation {
+  id: string;
+  name: string | null;
+  enabled: boolean | null;
+  status: string;
+  last_run: { run_id: string; status: string; finished_at: string | null } | null;
+}
+
+export interface AutomationRunSummary {
+  run_id: string;
+  automation_id: string;
+  status: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export async function fetchAutomations(): Promise<Automation[]> {
+  const response = await fetch(`${BASE_URL}/automations`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch automations: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function fetchAutomationRuns(limit: number): Promise<AutomationRunSummary[]> {
+  const response = await fetch(`${BASE_URL}/automations/runs?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch automation runs: ${response.status}`);
+  }
+  return response.json();
+}
