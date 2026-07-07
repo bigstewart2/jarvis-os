@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl, fetchDashboardConfig, saveDashboardConfig, fetchAutomations, fetchAutomationRuns, fetchTasks } from "./client";
+import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl, fetchDashboardConfig, saveDashboardConfig, fetchAutomations, fetchAutomationRuns, fetchTasks, searchNotes, fetchNoteContent } from "./client";
 
 describe("fetchSkills", () => {
   beforeEach(() => {
@@ -282,5 +282,66 @@ describe("fetchTasks", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
 
     await expect(fetchTasks(10)).rejects.toThrow("Failed to fetch tasks: 500");
+  });
+});
+
+describe("searchNotes", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("invokes the search_notes skill and returns matches", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ outputs: { matches: [{ path: "a.md", title: "A", excerpt: "hi", line_number: 1 }] } }),
+    } as Response);
+
+    const result = await searchNotes("hi");
+
+    expect(result).toEqual([{ path: "a.md", title: "A", excerpt: "hi", line_number: 1 }]);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8420/skills/search_notes/invoke",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: { query: "hi" } }),
+      }
+    );
+  });
+});
+
+describe("fetchNoteContent", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("invokes the read_note skill and returns content", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ outputs: { content: "full note text" } }),
+    } as Response);
+
+    const result = await fetchNoteContent("a.md");
+
+    expect(result).toBe("full note text");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8420/skills/read_note/invoke",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: { path: "a.md" } }),
+      }
+    );
+  });
+
+  it("returns null when the note doesn't exist", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ outputs: { content: null } }),
+    } as Response);
+
+    const result = await fetchNoteContent("missing.md");
+
+    expect(result).toBeNull();
   });
 });

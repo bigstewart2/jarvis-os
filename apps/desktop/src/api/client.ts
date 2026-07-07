@@ -147,3 +147,20 @@ export async function fetchTasks(limit: number): Promise<Task[]> {
   }
   return response.json();
 }
+
+export interface NoteMatch {
+  path: string;
+  title: string;
+  excerpt: string;
+  line_number: number;
+}
+
+export async function searchNotes(query: string): Promise<NoteMatch[]> {
+  const result = await invokeSkill("search_notes", { query });
+  return (result.outputs as { matches: NoteMatch[] }).matches;
+}
+
+export async function fetchNoteContent(path: string): Promise<string | null> {
+  const result = await invokeSkill("read_note", { path });
+  return (result.outputs as { content: string | null }).content;
+}
