@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
 import App from "./App";
 import * as client from "./api/client";
 
 class FakeWebSocket {
   onmessage: ((event: { data: string }) => void) | null = null;
-  constructor(_url: string) {}
+  static instances: FakeWebSocket[] = [];
+  constructor(_url: string) {
+    FakeWebSocket.instances.push(this);
+  }
   close() {}
 }
 
@@ -25,6 +28,7 @@ function mockBaseFetches() {
 describe("App", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    FakeWebSocket.instances = [];
     vi.stubGlobal("WebSocket", FakeWebSocket);
   });
 
@@ -134,5 +138,26 @@ describe("App", () => {
       expect(screen.getByTestId("customize-error")).toHaveTextContent("widget_order must be exactly a permutation");
     });
     expect(screen.getByTestId("customize-panel")).toBeInTheDocument();
+  });
+
+  it("shows a toast when an automation_run completed event arrives over the WebSocket", async () => {
+    mockBaseFetches();
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("Skills")).toBeInTheDocument();
+    });
+
+    act(() => {
+      FakeWebSocket.instances.forEach((ws) =>
+        ws.onmessage?.({
+          data: JSON.stringify({ type: "automation_run", stage: "completed", run_id: "run-1", automation_id: "ask_digest" }),
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("toast")).toHaveTextContent("ask_digest");
+    });
   });
 });

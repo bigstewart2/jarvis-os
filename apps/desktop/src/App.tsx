@@ -3,6 +3,8 @@ import type { DashboardConfig } from "./api/client";
 import { fetchDashboardConfig, saveDashboardConfig } from "./api/client";
 import { WIDGET_REGISTRY } from "./widgets/registry";
 import type { WidgetId } from "./widgets/registry";
+import { useEventToasts } from "./notifications/useEventToasts";
+import { ToastContainer } from "./notifications/ToastContainer";
 
 function CustomizePanel({
   config,
@@ -97,6 +99,7 @@ function App() {
   const [config, setConfig] = useState<DashboardConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [customizing, setCustomizing] = useState(false);
+  const toasts = useEventToasts();
 
   useEffect(() => {
     fetchDashboardConfig()
@@ -112,6 +115,7 @@ function App() {
 
   return (
     <main className="p-6 max-w-2xl mx-auto">
+      <ToastContainer toasts={toasts} />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Jarvis OS</h1>
         <button
