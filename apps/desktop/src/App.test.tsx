@@ -1,27 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
 import App from "./App";
 import * as client from "./api/client";
-import type { SkillManifest } from "./api/client";
-
-const echoManifest: SkillManifest = {
-  id: "echo",
-  name: "Echo",
-  description: "Repeats back text.",
-  input_schema: {
-    type: "object",
-    properties: { text: { type: "string" } },
-    required: ["text"],
-  },
-  output_schema: { type: "object", properties: { text: { type: "string" } } },
-  voice_invokable: true,
-  ui_component: null,
-};
 
 class FakeWebSocket {
   onmessage: ((event: { data: string }) => void) | null = null;
   constructor(_url: string) {}
   close() {}
+}
+
+const defaultConfig = { widget_order: ["skills", "voice", "automations", "tasks"], hidden_widgets: [] };
+
+function mockBaseFetches() {
+  vi.spyOn(client, "fetchDashboardConfig").mockResolvedValue(defaultConfig);
+  vi.spyOn(client, "fetchSkills").mockResolvedValue([]);
+  vi.spyOn(client, "fetchAutomations").mockResolvedValue([]);
+  vi.spyOn(client, "fetchAutomationRuns").mockResolvedValue([]);
+  vi.spyOn(client, "fetchTasks").mockResolvedValue([]);
 }
 
 describe("App", () => {
@@ -34,23 +29,88 @@ describe("App", () => {
     cleanup();
   });
 
-  it("renders a SkillForm for each fetched skill", async () => {
-    vi.spyOn(client, "fetchSkills").mockResolvedValue([echoManifest]);
+  it("renders all 4 widgets in the configured order by default", async () => {
+    mockBaseFetches();
 
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText("Echo")).toBeInTheDocument();
+      expect(screen.getByText("Skills")).toBeInTheDocument();
     });
+    expect(screen.getByText("Voice")).toBeInTheDocument();
+    expect(screen.getByText("Automations")).toBeInTheDocument();
+    expect(screen.getByText("Claude Code Tasks")).toBeInTheDocument();
   });
 
-  it("shows an error if fetching skills fails", async () => {
-    vi.spyOn(client, "fetchSkills").mockRejectedValue(new Error("network down"));
+  it("hides a widget listed in hidden_widgets", async () => {
+    vi.spyOn(client, "fetchDashboardConfig").mockResolvedValue({
+      widget_order: ["skills", "voice", "automations", "tasks"],
+      hidden_widgets: ["voice"],
+    });
+    vi.spyOn(client, "fetchSkills").mockResolvedValue([]);
+    vi.spyOn(client, "fetchAutomations").mockResolvedValue([]);
+    vi.spyOn(client, "fetchAutomationRuns").mockResolvedValue([]);
+    vi.spyOn(client, "fetchTasks").mockResolvedValue([]);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Skills")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Voice")).not.toBeInTheDocument();
+  });
+
+  it("shows an error if fetching the dashboard config fails", async () => {
+    vi.spyOn(client, "fetchDashboardConfig").mockRejectedValue(new Error("network down"));
 
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByTestId("app-error")).toHaveTextContent("network down");
     });
+  });
+
+  it("opens the Customize panel, hides a widget, and saves", async () => {
+    mockBaseFetches();
+    vi.spyOn(client, "saveDashboardConfig").mockResolvedValue({
+      widget_order: ["skills", "voice", "automations", "tasks"],
+      hidden_widgets: ["voice"],
+    });
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("Skills")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+    const panel = screen.getByTestId("customize-panel");
+    fireEvent.click(within(panel).getByLabelText("Voice"));
+    fireEvent.click(within(panel).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(client.saveDashboardConfig).toHaveBeenCalledWith({
+        widget_order: ["skills", "voice", "automations", "tasks"],
+        hidden_widgets: ["voice"],
+      });
+    });
+    expect(screen.queryByTestId("customize-panel")).not.toBeInTheDocument();
+  });
+
+  it("shows an inline error and keeps the panel open when saving fails", async () => {
+    mockBaseFetches();
+    vi.spyOn(client, "saveDashboardConfig").mockRejectedValue(new Error("widget_order must be exactly a permutation"));
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("Skills")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("customize-error")).toHaveTextContent("widget_order must be exactly a permutation");
+    });
+    expect(screen.getByTestId("customize-panel")).toBeInTheDocument();
   });
 });
