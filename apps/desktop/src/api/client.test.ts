@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl } from "./client";
+import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl, fetchDashboardConfig, saveDashboardConfig } from "./client";
 
 describe("fetchSkills", () => {
   beforeEach(() => {
@@ -132,5 +132,68 @@ describe("voiceAudioUrl", () => {
     expect(voiceAudioUrl("/voice/audio/abc-123")).toBe(
       "http://127.0.0.1:8420/voice/audio/abc-123"
     );
+  });
+});
+
+describe("fetchDashboardConfig", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns the parsed dashboard config on success", async () => {
+    const mockConfig = { widget_order: ["skills", "voice", "automations", "tasks"], hidden_widgets: [] };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockConfig,
+    } as Response);
+
+    const result = await fetchDashboardConfig();
+
+    expect(result).toEqual(mockConfig);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/dashboard/config");
+  });
+
+  it("throws when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    } as Response);
+
+    await expect(fetchDashboardConfig()).rejects.toThrow("Failed to fetch dashboard config: 500");
+  });
+});
+
+describe("saveDashboardConfig", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("PUTs the config and returns the parsed response on success", async () => {
+    const mockConfig = { widget_order: ["voice", "skills", "tasks", "automations"], hidden_widgets: ["tasks"] };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockConfig,
+    } as Response);
+
+    const result = await saveDashboardConfig(mockConfig);
+
+    expect(result).toEqual(mockConfig);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/dashboard/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mockConfig),
+    });
+  });
+
+  it("throws with status and body when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ detail: "widget_order must be exactly a permutation of [...]" }),
+    } as Response);
+
+    await expect(
+      saveDashboardConfig({ widget_order: ["skills"], hidden_widgets: [] })
+    ).rejects.toThrow(/Failed to save dashboard config: 400/);
   });
 });
