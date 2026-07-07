@@ -12,7 +12,7 @@ from core.automation.runner import AutomationRunner
 from core.automation.scheduler import build_scheduler
 from core.config import get_settings
 from core.db.database import init_db, make_engine, make_session_factory
-from core.db.models import AutomationRun, ClaudeCodeTask
+from core.db.models import AutomationRun, ClaudeCodeTask, DashboardConfig
 from core.events.bus import EventBus
 from core.providers.stt.factory import get_stt_provider
 from core.providers.tts.factory import get_tts_provider
@@ -28,6 +28,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 class InvokeRequest(BaseModel):
     inputs: dict
+
+
+KNOWN_WIDGET_IDS = {"skills", "voice", "automations", "tasks"}
+DEFAULT_WIDGET_ORDER = ["skills", "voice", "automations", "tasks"]
+
+
+class DashboardConfigRequest(BaseModel):
+    widget_order: list[str]
+    hidden_widgets: list[str]
 
 
 def create_app() -> FastAPI:
@@ -146,12 +155,12 @@ def create_app() -> FastAPI:
             }
 
     @app.get("/tasks")
-    def list_tasks():
+    def list_tasks(limit: int = 50):
         with app.state.session_factory() as session:
             rows = (
                 session.query(ClaudeCodeTask)
                 .order_by(ClaudeCodeTask.created_at.desc())
-                .limit(50)
+                .limit(limit)
                 .all()
             )
             return [
@@ -260,6 +269,39 @@ def create_app() -> FastAPI:
                 "started_at": row.started_at.isoformat() if row.started_at else None,
                 "finished_at": row.finished_at.isoformat() if row.finished_at else None,
             }
+
+    @app.get("/dashboard/config")
+    def get_dashboard_config():
+        with app.state.session_factory() as session:
+            row = session.query(DashboardConfig).first()
+            if row is None:
+                row = DashboardConfig(widget_order=DEFAULT_WIDGET_ORDER, hidden_widgets=[])
+                session.add(row)
+                session.commit()
+            return {"widget_order": row.widget_order, "hidden_widgets": row.hidden_widgets}
+
+    @app.put("/dashboard/config")
+    def put_dashboard_config(request: DashboardConfigRequest):
+        if set(request.widget_order) != KNOWN_WIDGET_IDS or len(request.widget_order) != len(KNOWN_WIDGET_IDS):
+            raise HTTPException(
+                status_code=400,
+                detail=f"widget_order must be exactly a permutation of {sorted(KNOWN_WIDGET_IDS)}",
+            )
+        if not set(request.hidden_widgets).issubset(KNOWN_WIDGET_IDS):
+            raise HTTPException(
+                status_code=400,
+                detail=f"hidden_widgets must be a subset of {sorted(KNOWN_WIDGET_IDS)}",
+            )
+        with app.state.session_factory() as session:
+            row = session.query(DashboardConfig).first()
+            if row is None:
+                row = DashboardConfig(widget_order=request.widget_order, hidden_widgets=request.hidden_widgets)
+                session.add(row)
+            else:
+                row.widget_order = request.widget_order
+                row.hidden_widgets = request.hidden_widgets
+            session.commit()
+            return {"widget_order": row.widget_order, "hidden_widgets": row.hidden_widgets}
 
     @app.websocket("/ws")
     async def events_ws(websocket: WebSocket):

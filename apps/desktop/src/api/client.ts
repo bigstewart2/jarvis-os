@@ -73,3 +73,77 @@ export async function invokeVoice(audio: Blob, invocationId: string): Promise<Vo
 export function voiceAudioUrl(path: string): string {
   return `${BASE_URL}${path}`;
 }
+
+export interface DashboardConfig {
+  widget_order: string[];
+  hidden_widgets: string[];
+}
+
+export async function fetchDashboardConfig(): Promise<DashboardConfig> {
+  const response = await fetch(`${BASE_URL}/dashboard/config`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch dashboard config: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function saveDashboardConfig(config: DashboardConfig): Promise<DashboardConfig> {
+  const response = await fetch(`${BASE_URL}/dashboard/config`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(`Failed to save dashboard config: ${response.status} ${JSON.stringify(body)}`);
+  }
+  return response.json();
+}
+
+export interface Automation {
+  id: string;
+  name: string | null;
+  enabled: boolean | null;
+  status: string;
+  last_run: { run_id: string; status: string; finished_at: string | null } | null;
+}
+
+export interface AutomationRunSummary {
+  run_id: string;
+  automation_id: string;
+  status: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export async function fetchAutomations(): Promise<Automation[]> {
+  const response = await fetch(`${BASE_URL}/automations`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch automations: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function fetchAutomationRuns(limit: number): Promise<AutomationRunSummary[]> {
+  const response = await fetch(`${BASE_URL}/automations/runs?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch automation runs: ${response.status}`);
+  }
+  return response.json();
+}
+
+export interface Task {
+  task_id: string;
+  status: string;
+  prompt: string;
+  created_at: string | null;
+  finished_at: string | null;
+}
+
+export async function fetchTasks(limit: number): Promise<Task[]> {
+  const response = await fetch(`${BASE_URL}/tasks?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tasks: ${response.status}`);
+  }
+  return response.json();
+}

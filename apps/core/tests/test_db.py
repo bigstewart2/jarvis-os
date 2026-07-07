@@ -112,3 +112,27 @@ def test_automation_run_can_be_created_and_queried():
         assert row.error is None
         assert row.started_at is not None
         assert row.finished_at is None
+
+
+def test_dashboard_config_can_be_created_and_queried():
+    from core.db.models import DashboardConfig
+
+    engine = make_engine("sqlite:///:memory:")
+    init_db(engine)
+    session_factory = make_session_factory(engine)
+
+    with session_factory() as session:
+        row = DashboardConfig(
+            widget_order=["skills", "voice", "automations", "tasks"],
+            hidden_widgets=[],
+        )
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+        assert row.id is not None
+
+    with session_factory() as session:
+        fetched = session.query(DashboardConfig).one()
+        assert fetched.widget_order == ["skills", "voice", "automations", "tasks"]
+        assert fetched.hidden_widgets == []
+        assert fetched.updated_at is not None

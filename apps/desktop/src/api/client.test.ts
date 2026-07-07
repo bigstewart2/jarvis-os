@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl } from "./client";
+import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl, fetchDashboardConfig, saveDashboardConfig, fetchAutomations, fetchAutomationRuns, fetchTasks } from "./client";
 
 describe("fetchSkills", () => {
   beforeEach(() => {
@@ -132,5 +132,155 @@ describe("voiceAudioUrl", () => {
     expect(voiceAudioUrl("/voice/audio/abc-123")).toBe(
       "http://127.0.0.1:8420/voice/audio/abc-123"
     );
+  });
+});
+
+describe("fetchDashboardConfig", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns the parsed dashboard config on success", async () => {
+    const mockConfig = { widget_order: ["skills", "voice", "automations", "tasks"], hidden_widgets: [] };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockConfig,
+    } as Response);
+
+    const result = await fetchDashboardConfig();
+
+    expect(result).toEqual(mockConfig);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/dashboard/config");
+  });
+
+  it("throws when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    } as Response);
+
+    await expect(fetchDashboardConfig()).rejects.toThrow("Failed to fetch dashboard config: 500");
+  });
+});
+
+describe("saveDashboardConfig", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("PUTs the config and returns the parsed response on success", async () => {
+    const mockConfig = { widget_order: ["voice", "skills", "tasks", "automations"], hidden_widgets: ["tasks"] };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockConfig,
+    } as Response);
+
+    const result = await saveDashboardConfig(mockConfig);
+
+    expect(result).toEqual(mockConfig);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/dashboard/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mockConfig),
+    });
+  });
+
+  it("throws with status and body when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ detail: "widget_order must be exactly a permutation of [...]" }),
+    } as Response);
+
+    await expect(
+      saveDashboardConfig({ widget_order: ["skills"], hidden_widgets: [] })
+    ).rejects.toThrow(/Failed to save dashboard config: 400/);
+  });
+});
+
+describe("fetchAutomations", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns parsed automations on success", async () => {
+    const mockAutomations = [
+      {
+        id: "ask_digest",
+        name: "Daily Ask Digest",
+        enabled: true,
+        status: "scheduled",
+        last_run: { run_id: "run-1", status: "completed", finished_at: "2026-07-06T09:00:00Z" },
+      },
+    ];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockAutomations,
+    } as Response);
+
+    const result = await fetchAutomations();
+
+    expect(result).toEqual(mockAutomations);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/automations");
+  });
+
+  it("throws when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+
+    await expect(fetchAutomations()).rejects.toThrow("Failed to fetch automations: 500");
+  });
+});
+
+describe("fetchAutomationRuns", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns parsed runs with the limit query param", async () => {
+    const mockRuns = [
+      { run_id: "run-1", automation_id: "ask_digest", status: "completed", started_at: "2026-07-06T09:00:00Z", finished_at: "2026-07-06T09:00:05Z" },
+    ];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockRuns,
+    } as Response);
+
+    const result = await fetchAutomationRuns(10);
+
+    expect(result).toEqual(mockRuns);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/automations/runs?limit=10");
+  });
+
+  it("throws when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+
+    await expect(fetchAutomationRuns(10)).rejects.toThrow("Failed to fetch automation runs: 500");
+  });
+});
+
+describe("fetchTasks", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns parsed tasks with the limit query param", async () => {
+    const mockTasks = [
+      { task_id: "task-1", status: "completed", prompt: "do X", created_at: "2026-07-06T09:00:00Z", finished_at: "2026-07-06T09:00:05Z" },
+    ];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockTasks,
+    } as Response);
+
+    const result = await fetchTasks(10);
+
+    expect(result).toEqual(mockTasks);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/tasks?limit=10");
+  });
+
+  it("throws when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+
+    await expect(fetchTasks(10)).rejects.toThrow("Failed to fetch tasks: 500");
   });
 });
