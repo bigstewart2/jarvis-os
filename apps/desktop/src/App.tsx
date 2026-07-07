@@ -13,7 +13,9 @@ function CustomizePanel({
   onSave: (config: DashboardConfig) => void;
   onCancel: () => void;
 }) {
-  const [order, setOrder] = useState<WidgetId[]>(config.widget_order as WidgetId[]);
+  const [order, setOrder] = useState<WidgetId[]>(
+    (config.widget_order as WidgetId[]).filter((id) => id in WIDGET_REGISTRY)
+  );
   const [hidden, setHidden] = useState<Set<WidgetId>>(new Set(config.hidden_widgets as WidgetId[]));
   const [error, setError] = useState<string | null>(null);
 
@@ -103,7 +105,9 @@ function App() {
   }, []);
 
   const visibleOrderedWidgets: WidgetId[] = config
-    ? (config.widget_order as WidgetId[]).filter((id) => !config.hidden_widgets.includes(id))
+    ? (config.widget_order as WidgetId[])
+        .filter((id) => id in WIDGET_REGISTRY)
+        .filter((id) => !config.hidden_widgets.includes(id))
     : [];
 
   return (

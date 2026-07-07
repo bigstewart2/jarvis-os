@@ -9,7 +9,10 @@ class FakeWebSocket {
   close() {}
 }
 
-const defaultConfig = { widget_order: ["skills", "voice", "automations", "tasks"], hidden_widgets: [] };
+const defaultConfig = {
+  widget_order: ["skills", "voice", "automations", "tasks", "notes"],
+  hidden_widgets: [],
+};
 
 function mockBaseFetches() {
   vi.spyOn(client, "fetchDashboardConfig").mockResolvedValue(defaultConfig);
@@ -29,7 +32,7 @@ describe("App", () => {
     cleanup();
   });
 
-  it("renders all 4 widgets in the configured order by default", async () => {
+  it("renders all 5 widgets in the configured order by default", async () => {
     mockBaseFetches();
 
     render(<App />);
@@ -40,11 +43,12 @@ describe("App", () => {
     expect(screen.getByText("Voice")).toBeInTheDocument();
     expect(screen.getByText("Automations")).toBeInTheDocument();
     expect(screen.getByText("Claude Code Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Notes")).toBeInTheDocument();
   });
 
   it("hides a widget listed in hidden_widgets", async () => {
     vi.spyOn(client, "fetchDashboardConfig").mockResolvedValue({
-      widget_order: ["skills", "voice", "automations", "tasks"],
+      widget_order: ["skills", "voice", "automations", "tasks", "notes"],
       hidden_widgets: ["voice"],
     });
     vi.spyOn(client, "fetchSkills").mockResolvedValue([]);
@@ -60,6 +64,24 @@ describe("App", () => {
     expect(screen.queryByText("Voice")).not.toBeInTheDocument();
   });
 
+  it("ignores an unknown widget id present in a stale saved config", async () => {
+    vi.spyOn(client, "fetchDashboardConfig").mockResolvedValue({
+      widget_order: ["skills", "voice", "automations", "tasks", "bogus-old-widget"],
+      hidden_widgets: [],
+    });
+    vi.spyOn(client, "fetchSkills").mockResolvedValue([]);
+    vi.spyOn(client, "fetchAutomations").mockResolvedValue([]);
+    vi.spyOn(client, "fetchAutomationRuns").mockResolvedValue([]);
+    vi.spyOn(client, "fetchTasks").mockResolvedValue([]);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Skills")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Claude Code Tasks")).toBeInTheDocument();
+  });
+
   it("shows an error if fetching the dashboard config fails", async () => {
     vi.spyOn(client, "fetchDashboardConfig").mockRejectedValue(new Error("network down"));
 
@@ -73,7 +95,7 @@ describe("App", () => {
   it("opens the Customize panel, hides a widget, and saves", async () => {
     mockBaseFetches();
     vi.spyOn(client, "saveDashboardConfig").mockResolvedValue({
-      widget_order: ["skills", "voice", "automations", "tasks"],
+      widget_order: ["skills", "voice", "automations", "tasks", "notes"],
       hidden_widgets: ["voice"],
     });
 
@@ -89,7 +111,7 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(client.saveDashboardConfig).toHaveBeenCalledWith({
-        widget_order: ["skills", "voice", "automations", "tasks"],
+        widget_order: ["skills", "voice", "automations", "tasks", "notes"],
         hidden_widgets: ["voice"],
       });
     });
