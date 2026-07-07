@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl, fetchDashboardConfig, saveDashboardConfig, fetchAutomations, fetchAutomationRuns } from "./client";
+import { fetchSkills, invokeSkill, invokeVoice, voiceAudioUrl, fetchDashboardConfig, saveDashboardConfig, fetchAutomations, fetchAutomationRuns, fetchTasks } from "./client";
 
 describe("fetchSkills", () => {
   beforeEach(() => {
@@ -255,5 +255,32 @@ describe("fetchAutomationRuns", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
 
     await expect(fetchAutomationRuns(10)).rejects.toThrow("Failed to fetch automation runs: 500");
+  });
+});
+
+describe("fetchTasks", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns parsed tasks with the limit query param", async () => {
+    const mockTasks = [
+      { task_id: "task-1", status: "completed", prompt: "do X", created_at: "2026-07-06T09:00:00Z", finished_at: "2026-07-06T09:00:05Z" },
+    ];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockTasks,
+    } as Response);
+
+    const result = await fetchTasks(10);
+
+    expect(result).toEqual(mockTasks);
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://127.0.0.1:8420/tasks?limit=10");
+  });
+
+  it("throws when the response is not ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+
+    await expect(fetchTasks(10)).rejects.toThrow("Failed to fetch tasks: 500");
   });
 });

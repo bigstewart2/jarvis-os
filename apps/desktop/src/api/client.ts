@@ -131,3 +131,19 @@ export async function fetchAutomationRuns(limit: number): Promise<AutomationRunS
   }
   return response.json();
 }
+
+export interface Task {
+  task_id: string;
+  status: string;
+  prompt: string;
+  created_at: string | null;
+  finished_at: string | null;
+}
+
+export async function fetchTasks(limit: number): Promise<Task[]> {
+  const response = await fetch(`${BASE_URL}/tasks?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tasks: ${response.status}`);
+  }
+  return response.json();
+}
