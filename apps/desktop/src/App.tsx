@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DashboardConfig } from "./api/client";
 import { fetchDashboardConfig, saveDashboardConfig } from "./api/client";
-import { WIDGET_REGISTRY } from "./widgets/registry";
+import { ALL_WIDGET_IDS, WIDGET_REGISTRY } from "./widgets/registry";
 import type { WidgetId } from "./widgets/registry";
 import { useEventToasts } from "./notifications/useEventToasts";
 import { ToastContainer } from "./notifications/ToastContainer";
@@ -15,10 +15,19 @@ function CustomizePanel({
   onSave: (config: DashboardConfig) => void;
   onCancel: () => void;
 }) {
-  const [order, setOrder] = useState<WidgetId[]>(
-    (config.widget_order as WidgetId[]).filter((id) => id in WIDGET_REGISTRY)
-  );
-  const [hidden, setHidden] = useState<Set<WidgetId>>(new Set(config.hidden_widgets as WidgetId[]));
+  const [order, setOrder] = useState<WidgetId[]>(() => {
+    const savedOrder = (config.widget_order as WidgetId[]).filter((id) => id in WIDGET_REGISTRY);
+    const missing = ALL_WIDGET_IDS.filter((id) => !savedOrder.includes(id));
+    return [...savedOrder, ...missing];
+  });
+  const [hidden, setHidden] = useState<Set<WidgetId>>(() => {
+    const savedOrder = (config.widget_order as WidgetId[]).filter((id) => id in WIDGET_REGISTRY);
+    const missing = ALL_WIDGET_IDS.filter((id) => !savedOrder.includes(id));
+    const fullOrder = new Set([...savedOrder, ...missing]);
+    return new Set(
+      (config.hidden_widgets as WidgetId[]).filter((id) => id in WIDGET_REGISTRY && fullOrder.has(id))
+    );
+  });
   const [error, setError] = useState<string | null>(null);
 
   const toggleHidden = (id: WidgetId) => {

@@ -140,6 +140,40 @@ describe("App", () => {
     expect(screen.getByTestId("customize-panel")).toBeInTheDocument();
   });
 
+  it("upgrades a stale 4-widget config to include the missing widget and saves the full permutation", async () => {
+    vi.spyOn(client, "fetchDashboardConfig").mockResolvedValue({
+      widget_order: ["skills", "voice", "automations", "tasks"],
+      hidden_widgets: [],
+    });
+    vi.spyOn(client, "fetchSkills").mockResolvedValue([]);
+    vi.spyOn(client, "fetchAutomations").mockResolvedValue([]);
+    vi.spyOn(client, "fetchAutomationRuns").mockResolvedValue([]);
+    vi.spyOn(client, "fetchTasks").mockResolvedValue([]);
+    vi.spyOn(client, "saveDashboardConfig").mockResolvedValue({
+      widget_order: ["skills", "voice", "automations", "tasks", "notes"],
+      hidden_widgets: [],
+    });
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("Skills")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+    const panel = screen.getByTestId("customize-panel");
+    expect(within(panel).getByLabelText("Notes")).toBeInTheDocument();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(client.saveDashboardConfig).toHaveBeenCalledWith({
+        widget_order: ["skills", "voice", "automations", "tasks", "notes"],
+        hidden_widgets: [],
+      });
+    });
+    expect(screen.queryByTestId("customize-panel")).not.toBeInTheDocument();
+  });
+
   it("shows a toast when an automation_run completed event arrives over the WebSocket", async () => {
     mockBaseFetches();
 
