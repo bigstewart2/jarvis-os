@@ -41,6 +41,8 @@ class Settings(BaseSettings):
 
     automations_dir: str = "automations"
     knowledge_vault_dir: str = "tests/fixtures/vault"
+    google_credentials_path: str = "google_credentials.json"
+    google_token_path: str = "google_token.json"
 
 
 def get_settings() -> Settings:
