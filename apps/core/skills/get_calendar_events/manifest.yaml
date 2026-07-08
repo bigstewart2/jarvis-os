@@ -1,0 +1,14 @@
+id: get_calendar_events
+name: Get Calendar Events
+description: Lists upcoming events from your Google Calendar for the next N days (default 1).
+voice_invokable: true
+input_schema:
+  type: object
+  properties:
+    days_ahead:
+      type: integer
+output_schema:
+  type: object
+  properties:
+    events:
+      type: array

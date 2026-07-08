@@ -1,0 +1,16 @@
+id: search_email
+name: Search Email
+description: Searches your Gmail inbox. Accepts Gmail query syntax, e.g. "from:someone newer_than:7d".
+voice_invokable: true
+input_schema:
+  type: object
+  properties:
+    query:
+      type: string
+  required:
+    - query
+output_schema:
+  type: object
+  properties:
+    messages:
+      type: array
