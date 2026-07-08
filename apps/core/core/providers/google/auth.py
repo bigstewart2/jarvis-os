@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from google.auth.transport.requests import Request
@@ -34,9 +35,20 @@ def get_google_credentials(settings) -> Credentials:
 
     if not creds.valid:
         if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            token_path.write_text(creds.to_json())
+            try:
+                creds.refresh(Request())
+            except Exception as exc:
+                raise GoogleAuthError(_REAUTH_HINT) from exc
+            _persist_token(token_path, creds.to_json())
         else:
             raise GoogleAuthError(_REAUTH_HINT)
 
     return creds
+
+
+def _persist_token(token_path: Path, token_json: str) -> None:
+    """Write the token atomically and with owner-only permissions."""
+    tmp_path = token_path.with_name(f"{token_path.name}.tmp")
+    tmp_path.write_text(token_json)
+    os.chmod(tmp_path, 0o600)
+    os.replace(tmp_path, token_path)

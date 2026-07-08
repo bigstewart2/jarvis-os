@@ -55,6 +55,37 @@ def test_refreshes_and_persists_expired_token(tmp_path, monkeypatch):
     assert persisted["token"] == "refreshed-access-token"
 
 
+def test_refresh_persists_token_with_owner_only_permissions(tmp_path, monkeypatch):
+    expired = dict(VALID_TOKEN, expiry="2020-01-01T00:00:00Z")
+    token_path = tmp_path / "token.json"
+    token_path.write_text(json.dumps(expired))
+
+    def fake_refresh(self, request):
+        self.token = "refreshed-access-token"
+        import datetime
+        self.expiry = datetime.datetime(2099, 1, 1)
+
+    monkeypatch.setattr("google.oauth2.credentials.Credentials.refresh", fake_refresh)
+
+    get_google_credentials(FakeSettings(token_path))
+
+    assert oct(token_path.stat().st_mode & 0o777) == oct(0o600)
+
+
+def test_refresh_failure_raises_google_auth_error(tmp_path, monkeypatch):
+    expired = dict(VALID_TOKEN, expiry="2020-01-01T00:00:00Z")
+    token_path = tmp_path / "token.json"
+    token_path.write_text(json.dumps(expired))
+
+    def fake_refresh(self, request):
+        raise Exception("invalid_grant")
+
+    monkeypatch.setattr("google.oauth2.credentials.Credentials.refresh", fake_refresh)
+
+    with pytest.raises(GoogleAuthError, match="google_oauth_setup"):
+        get_google_credentials(FakeSettings(token_path))
+
+
 def test_raises_google_auth_error_for_expired_token_without_refresh_token(tmp_path):
     broken = dict(VALID_TOKEN, expiry="2020-01-01T00:00:00Z")
     del broken["refresh_token"]
