@@ -1,0 +1,26 @@
+id: draft_email
+name: Draft Email
+description: Creates a DRAFT email in your Gmail account. Never sends — you review and send it yourself in Gmail.
+voice_invokable: false
+input_schema:
+  type: object
+  properties:
+    to:
+      type: string
+    subject:
+      type: string
+    body:
+      type: string
+  required:
+    - to
+    - subject
+    - body
+output_schema:
+  type: object
+  properties:
+    draft_id:
+      type: string
+    to:
+      type: string
+    subject:
+      type: string

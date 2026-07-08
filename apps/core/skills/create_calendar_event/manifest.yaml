@@ -1,0 +1,32 @@
+id: create_calendar_event
+name: Create Calendar Event
+description: Creates an event on your primary Google Calendar. Times must be ISO 8601 with timezone offset.
+voice_invokable: false
+input_schema:
+  type: object
+  properties:
+    title:
+      type: string
+    start_iso:
+      type: string
+    end_iso:
+      type: string
+    description:
+      type: string
+  required:
+    - title
+    - start_iso
+    - end_iso
+output_schema:
+  type: object
+  properties:
+    event_id:
+      type: string
+    html_link:
+      type: string
+    title:
+      type: string
+    start:
+      type: string
+    end:
+      type: string
