@@ -5,3 +5,5 @@ __pycache__/
 voices/
 data/voice/
 .env
+google_credentials.json
+google_token.json
