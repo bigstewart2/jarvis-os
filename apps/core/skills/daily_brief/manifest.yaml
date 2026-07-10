@@ -1,0 +1,23 @@
+id: daily_brief
+name: Daily Brief
+description: >-
+  Composes a morning briefing from today's Google Calendar events and recent
+  important email, written by the LLM as a short readable digest. Say
+  "give me my daily brief" or "what does my day look like".
+voice_invokable: true
+input_schema:
+  type: object
+  properties:
+    days_ahead:
+      type: integer
+    email_query:
+      type: string
+output_schema:
+  type: object
+  properties:
+    brief:
+      type: string
+    events:
+      type: array
+    messages:
+      type: array

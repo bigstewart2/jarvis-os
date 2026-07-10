@@ -21,7 +21,8 @@ describe("AutomationsWidget", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Daily Ask Digest")).toBeInTheDocument();
-      expect(screen.getByText(/run-1/)).toBeInTheDocument();
+      expect(screen.getAllByText(/ask_digest/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/completed/)).toBeInTheDocument();
     });
   });
 

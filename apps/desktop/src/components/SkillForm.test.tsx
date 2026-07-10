@@ -27,12 +27,12 @@ describe("SkillForm", () => {
     cleanup();
   });
 
-  it("renders one input per input_schema property and the invoke button", () => {
+  it("renders one input per input_schema property and the run button", () => {
     render(<SkillForm skill={echoManifest} />);
 
     expect(screen.getByText("Echo")).toBeInTheDocument();
     expect(screen.getByLabelText("text")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Invoke" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeInTheDocument();
   });
 
   it("shows the result after a successful invoke", async () => {
@@ -40,7 +40,7 @@ describe("SkillForm", () => {
 
     render(<SkillForm skill={echoManifest} />);
     fireEvent.change(screen.getByLabelText("text"), { target: { value: "hi" } });
-    fireEvent.click(screen.getByRole("button", { name: "Invoke" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("skill-result")).toHaveTextContent('"text": "hi"');
@@ -52,7 +52,7 @@ describe("SkillForm", () => {
     vi.spyOn(client, "invokeSkill").mockRejectedValue(new Error("boom"));
 
     render(<SkillForm skill={echoManifest} />);
-    fireEvent.click(screen.getByRole("button", { name: "Invoke" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("skill-error")).toHaveTextContent("boom");

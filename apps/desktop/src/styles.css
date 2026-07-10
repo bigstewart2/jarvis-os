@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+/*
+ * Jarvis OS design tokens — "pre-dawn flight deck"
+ * Deep cobalt-black ground, luminous indigo as the single accent,
+ * warm amber as the live/recording signal. One family (system sans),
+ * mono reserved for timestamps and identifiers.
+ */
+@theme {
+  --color-bg: oklch(0.155 0.018 258);
+  --color-surface: oklch(0.2 0.021 258);
+  --color-surface-2: oklch(0.245 0.024 258);
+  --color-edge: oklch(0.31 0.026 258);
+  --color-edge-soft: oklch(0.26 0.023 258);
+
+  --color-ink: oklch(0.93 0.01 258);
+  --color-ink-mute: oklch(0.74 0.022 258);
+  --color-ink-faint: oklch(0.6 0.024 258);
+
+  --color-primary: oklch(0.72 0.135 258);
+  --color-primary-soft: oklch(0.35 0.07 258);
+  --color-primary-ink: oklch(0.16 0.03 258);
+
+  --color-signal: oklch(0.8 0.14 75);
+  --color-ok: oklch(0.76 0.13 155);
+  --color-danger: oklch(0.72 0.16 25);
+
+  --font-sans: ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-card: 0.75rem;
+
+  --animate-pulse-dot: pulse-dot 2.4s ease-in-out infinite;
+  --animate-rise: rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--color-primary-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

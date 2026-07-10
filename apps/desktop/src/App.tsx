@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type { DashboardConfig } from "./api/client";
-import { fetchDashboardConfig, saveDashboardConfig } from "./api/client";
+import type { DashboardConfig, SkillManifest } from "./api/client";
+import { fetchDashboardConfig, fetchSkills, saveDashboardConfig } from "./api/client";
 import { ALL_WIDGET_IDS, WIDGET_REGISTRY } from "./widgets/registry";
 import type { WidgetId } from "./widgets/registry";
 import { useEventToasts } from "./notifications/useEventToasts";
 import { ToastContainer } from "./notifications/ToastContainer";
+import { BriefPanel } from "./components/BriefPanel";
+import { CapabilitiesPanel } from "./components/CapabilitiesPanel";
 
 function CustomizePanel({
   config,
@@ -64,39 +66,57 @@ function CustomizePanel({
   };
 
   return (
-    <div data-testid="customize-panel" className="rounded-lg border border-gray-300 p-4 mb-4">
-      <h2 className="text-lg font-semibold mb-2">Customize dashboard</h2>
-      {order.map((id, index) => (
-        <div key={id} className="flex items-center gap-2 mb-1">
-          <input
-            type="checkbox"
-            aria-label={WIDGET_REGISTRY[id].label}
-            checked={!hidden.has(id)}
-            onChange={() => toggleHidden(id)}
-          />
-          <span>{WIDGET_REGISTRY[id].label}</span>
-          <button onClick={() => move(id, -1)} disabled={index === 0} aria-label={`Move ${WIDGET_REGISTRY[id].label} up`}>
-            ↑
-          </button>
-          <button
-            onClick={() => move(id, 1)}
-            disabled={index === order.length - 1}
-            aria-label={`Move ${WIDGET_REGISTRY[id].label} down`}
-          >
-            ↓
-          </button>
-        </div>
-      ))}
+    <div
+      data-testid="customize-panel"
+      className="animate-rise rounded-card border border-edge-soft bg-surface px-5 py-4"
+    >
+      <h2 className="mb-2 text-sm font-semibold">Customize dashboard</h2>
+      <div className="space-y-1">
+        {order.map((id, index) => (
+          <div key={id} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              aria-label={WIDGET_REGISTRY[id].label}
+              checked={!hidden.has(id)}
+              onChange={() => toggleHidden(id)}
+              className="accent-(--color-primary)"
+            />
+            <span className="flex-1">{WIDGET_REGISTRY[id].label}</span>
+            <button
+              onClick={() => move(id, -1)}
+              disabled={index === 0}
+              aria-label={`Move ${WIDGET_REGISTRY[id].label} up`}
+              className="rounded px-2 py-0.5 text-ink-mute transition-colors duration-150 hover:text-ink disabled:opacity-30"
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => move(id, 1)}
+              disabled={index === order.length - 1}
+              aria-label={`Move ${WIDGET_REGISTRY[id].label} down`}
+              className="rounded px-2 py-0.5 text-ink-mute transition-colors duration-150 hover:text-ink disabled:opacity-30"
+            >
+              ↓
+            </button>
+          </div>
+        ))}
+      </div>
       {error && (
-        <p data-testid="customize-error" className="text-sm text-red-600 mt-2">
+        <p data-testid="customize-error" className="mt-2 text-sm text-danger">
           {error}
         </p>
       )}
-      <div className="mt-2">
-        <button onClick={handleSave} className="bg-blue-600 text-white rounded px-3 py-1 mr-2">
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={handleSave}
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-ink transition-colors duration-150 hover:opacity-90"
+        >
           Save
         </button>
-        <button onClick={onCancel} className="rounded px-3 py-1 border border-gray-300">
+        <button
+          onClick={onCancel}
+          className="rounded-md border border-edge px-3 py-1.5 text-sm transition-colors duration-150 hover:border-primary"
+        >
           Cancel
         </button>
       </div>
@@ -108,12 +128,21 @@ function App() {
   const [config, setConfig] = useState<DashboardConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [customizing, setCustomizing] = useState(false);
+  const [showCapabilities, setShowCapabilities] = useState(false);
+  const [skills, setSkills] = useState<SkillManifest[]>([]);
+  const [online, setOnline] = useState<boolean | null>(null);
   const toasts = useEventToasts();
 
   useEffect(() => {
     fetchDashboardConfig()
       .then(setConfig)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    fetchSkills()
+      .then((loaded) => {
+        setSkills(loaded);
+        setOnline(true);
+      })
+      .catch(() => setOnline(false));
   }, []);
 
   const visibleOrderedWidgets: WidgetId[] = config
@@ -123,37 +152,74 @@ function App() {
     : [];
 
   return (
-    <main className="p-6 max-w-2xl mx-auto">
+    <main className="mx-auto max-w-5xl px-6 py-6">
       <ToastContainer toasts={toasts} />
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Jarvis OS</h1>
-        <button
-          onClick={() => setCustomizing((prev) => !prev)}
-          className="rounded px-3 py-1 border border-gray-300"
-        >
-          Customize
-        </button>
-      </div>
+      <header className="mb-5 flex items-center justify-between gap-4">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-semibold tracking-tight">Jarvis</h1>
+          <span
+            data-testid="backend-status"
+            className="flex items-center gap-1.5 font-mono text-xs text-ink-faint"
+          >
+            <span
+              aria-hidden="true"
+              className={
+                online === null
+                  ? "h-1.5 w-1.5 rounded-full bg-ink-faint"
+                  : online
+                    ? "h-1.5 w-1.5 animate-pulse-dot rounded-full bg-ok"
+                    : "h-1.5 w-1.5 rounded-full bg-danger"
+              }
+            />
+            {online === null ? "connecting" : online ? "online" : "backend offline"}
+          </span>
+        </div>
+        <nav className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCapabilities((prev) => !prev)}
+            className="rounded-md border border-edge px-3 py-1.5 text-sm transition-colors duration-150 hover:border-primary"
+          >
+            What can Jarvis do?
+          </button>
+          <button
+            onClick={() => setCustomizing((prev) => !prev)}
+            className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink-mute transition-colors duration-150 hover:border-primary hover:text-ink"
+          >
+            Customize
+          </button>
+        </nav>
+      </header>
       {error && (
-        <p data-testid="app-error" className="text-red-600 mb-4">
+        <p data-testid="app-error" className="mb-4 text-sm text-danger">
           {error}
         </p>
       )}
-      {customizing && config && (
-        <CustomizePanel
-          config={config}
-          onSave={(saved) => {
-            setConfig(saved);
-            setCustomizing(false);
-          }}
-          onCancel={() => setCustomizing(false)}
-        />
-      )}
       <div className="flex flex-col gap-4">
-        {visibleOrderedWidgets.map((id) => {
-          const Widget = WIDGET_REGISTRY[id].component;
-          return <Widget key={id} />;
-        })}
+        {showCapabilities && (
+          <CapabilitiesPanel skills={skills} onClose={() => setShowCapabilities(false)} />
+        )}
+        {customizing && config && (
+          <CustomizePanel
+            config={config}
+            onSave={(saved) => {
+              setConfig(saved);
+              setCustomizing(false);
+            }}
+            onCancel={() => setCustomizing(false)}
+          />
+        )}
+        <BriefPanel />
+        <div className="grid gap-4 md:grid-cols-2">
+          {visibleOrderedWidgets.map((id) => {
+            const Widget = WIDGET_REGISTRY[id].component;
+            const fullWidth = id === "skills" || id === "notes";
+            return (
+              <div key={id} className={fullWidth ? "md:col-span-2" : ""}>
+                <Widget />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </main>
   );

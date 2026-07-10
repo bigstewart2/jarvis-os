@@ -17,7 +17,10 @@ describe("TasksWidget", () => {
     render(<TasksWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/task-1/)).toBeInTheDocument();
+      expect(screen.getByText("do X")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/completed/)).toBeInTheDocument();
     });
   });
 

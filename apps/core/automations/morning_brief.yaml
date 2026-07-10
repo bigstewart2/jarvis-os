@@ -1,0 +1,13 @@
+id: morning_brief
+name: Morning Brief
+description: Every morning at 7:30, compose the daily brief from calendar + email and read it out loud.
+enabled: true
+trigger:
+  type: cron
+  cron: "30 7 * * *"
+steps:
+  - skill: daily_brief
+    inputs: {}
+  - skill: speak
+    inputs:
+      text: "{{steps.0.brief}}"

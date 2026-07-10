@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SkillManifest } from "../api/client";
 import { fetchSkills } from "../api/client";
 import { SkillForm } from "../components/SkillForm";
+import { Card, EmptyHint } from "../components/Card";
 
 export function SkillsWidget() {
   const [skills, setSkills] = useState<SkillManifest[]>([]);
@@ -14,16 +15,16 @@ export function SkillsWidget() {
   }, []);
 
   return (
-    <div className="rounded-lg border border-gray-300 p-4">
-      <h2 className="text-lg font-semibold mb-2">Skills</h2>
+    <Card title="Skills">
       {error && (
-        <p data-testid="skills-widget-error" className="text-sm text-red-600 mb-2">
+        <p data-testid="skills-widget-error" className="mb-2 text-sm text-danger">
           {error}
         </p>
       )}
+      {!error && skills.length === 0 && <EmptyHint>No skills loaded yet.</EmptyHint>}
       {skills.map((skill) => (
         <SkillForm key={skill.id} skill={skill} />
       ))}
-    </div>
+    </Card>
   );
 }

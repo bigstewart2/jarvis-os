@@ -61,7 +61,7 @@ describe("VoiceButton", () => {
     const button = screen.getByTestId("voice-button");
 
     fireEvent.mouseDown(button);
-    expect(button).toHaveTextContent("Recording");
+    expect(button).toHaveTextContent("Listening");
 
     fireEvent.mouseUp(button);
 
