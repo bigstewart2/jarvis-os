@@ -52,3 +52,9 @@ The full architecture and a spec + implementation plan for each milestone live i
 ## Running it
 
 This is a personal macOS-only project under active development; it's shared here to show the architecture and engineering approach rather than as a packaged release. Configuration is driven by environment variables and a local `.env` (never committed) — no secrets live in the repo.
+
+## Earlier voice-pipeline source
+
+The [retained earlier test source](docs/Work%20Records/Voice%20Pipeline/Source%20History/test_voice_pipeline.py.txt) was filed October 21, 2026 from `_scratch/orphans/productivity-stale-worktree/jarvis-os/.claude/worktrees/jarvis-os-m4-voice-pipeline/apps/core/tests/test_voice_pipeline.py` in the parent AI Projects repository. Its bytes are unchanged; the `.txt` suffix keeps this private historical copy out of ordinary test discovery. It is not the current suite or proof that any test passed.
+
+Use [the active voice-pipeline tests](apps/core/tests/test_voice_pipeline.py) for current implementation work. The earlier copy has seven calls without the current invocation-ID argument; the active file also includes two later tests. This filing does not merge or execute the older copy, or change the app.

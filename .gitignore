@@ -21,3 +21,6 @@ venv/
 
 # Logs
 *.log
+
+# Retained historical source; keep private and outside test discovery.
+/docs/Work Records/Voice Pipeline/Source History/test_voice_pipeline.py.txt
