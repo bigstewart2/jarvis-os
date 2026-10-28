@@ -1,5 +1,7 @@
 # Jarvis OS
 
+**Retired — October 22, 2026:** Jarvis is a retired desktop-assistant project. Stephen chose Old Projects as its retained home. Source, history, settings, saved data and dependencies remain preserved here. Earlier active-development wording below is historical; this organization change does not restart the app.
+
 A personal AI operating system for the desktop — voice interaction, local and cloud LLMs, Claude Code, reusable skills, dashboards, and automations, unified into a single macOS application.
 
 > **Status: in active development.** This is a milestone-driven build. The system-wide architecture was designed and approved *before any code was written* ([Milestone 0 spec](docs/superpowers/specs/2026-07-05-jarvis-os-architecture-design.md)), and the app is being built out milestone by milestone against that design. It is not finished — the roadmap below shows where it's headed.
